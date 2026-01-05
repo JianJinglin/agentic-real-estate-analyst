@@ -44,15 +44,21 @@
 .rancho-modal-content {
   background: white;
   border-radius: 16px;
-  padding: 30px;
+  padding: 25px;
   max-width: 500px;
   width: 90%;
-  max-height: 85vh;
+  max-height: 90vh;
   overflow-y: auto;
   position: relative;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   animation: slideIn 0.3s ease;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Expanded modal for detailed analysis */
+.rancho-modal-content.rancho-expanded {
+  max-width: 650px;
+  padding: 20px 25px;
 }
 
 @keyframes slideIn {
@@ -68,8 +74,8 @@
 
 .rancho-close {
   position: absolute;
-  top: 15px;
-  right: 20px;
+  top: 12px;
+  right: 18px;
   font-size: 28px;
   cursor: pointer;
   color: #999;
@@ -81,38 +87,137 @@
 }
 
 .rancho-modal-content h2 {
-  margin: 0 0 20px 0;
+  margin: 0 0 15px 0;
   color: #333;
-  font-size: 24px;
+  font-size: 22px;
   border-bottom: 2px solid #667eea;
-  padding-bottom: 10px;
+  padding-bottom: 8px;
+}
+
+/* Grid layout for property info */
+.rancho-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.rancho-grid .rancho-section {
+  margin-bottom: 0;
 }
 
 .rancho-section {
-  margin-bottom: 20px;
-  padding: 15px;
+  margin-bottom: 12px;
+  padding: 12px;
   background: #f8f9fa;
   border-radius: 10px;
 }
 
 .rancho-section h3 {
-  margin: 0 0 10px 0;
+  margin: 0 0 8px 0;
   color: #667eea;
-  font-size: 16px;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .rancho-section p {
-  margin: 5px 0;
+  margin: 4px 0;
   color: #555;
-  font-size: 14px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* Row layout for rent info */
+.rancho-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.rancho-row p {
+  margin: 0;
+}
+
+/* Table styles */
+.rancho-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.rancho-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.rancho-table td:first-child {
+  color: #555;
+}
+
+.rancho-table td.num {
+  text-align: right;
+  font-family: 'SF Mono', Monaco, monospace;
+  color: #333;
+  white-space: nowrap;
+}
+
+.rancho-table tr.total td {
+  border-top: 2px solid #667eea;
+  border-bottom: none;
+  padding-top: 10px;
+}
+
+.rancho-table tr.divider td {
+  border-bottom: 2px solid #dee2e6;
+  padding: 4px;
+}
+
+.rancho-table tr.highlight td {
+  padding: 8px;
+  border-radius: 6px;
+}
+
+.rancho-table tr.highlight.positive td {
+  background: #d4edda;
+  color: #155724;
+}
+
+.rancho-table tr.highlight.negative td {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+/* Highlight colors */
+.highlight-green {
+  color: #28a745 !important;
+  font-weight: 600;
+}
+
+.highlight-blue {
+  color: #007bff !important;
+  font-weight: 600;
 }
 
 .rancho-result {
   background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
 }
 
+/* Assumptions section */
+.rancho-assumptions {
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+}
+
+.rancho-assumptions p {
+  font-size: 11px;
+  color: #856404;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Legacy cashflow styles (for error modal) */
 .cashflow {
-  font-size: 20px !important;
+  font-size: 18px !important;
   padding: 10px;
   border-radius: 8px;
   text-align: center;
@@ -128,10 +233,11 @@
   color: #721c24;
 }
 
+/* Action buttons */
 .rancho-actions {
   display: flex;
   gap: 10px;
-  margin-top: 20px;
+  margin-top: 15px;
 }
 
 .rancho-btn-primary {
@@ -174,4 +280,40 @@
 .rancho-btn-secondary:hover {
   background: #667eea;
   color: white;
+}
+
+/* Scrollbar styling */
+.rancho-modal-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.rancho-modal-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.rancho-modal-content::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.rancho-modal-content::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+/* Responsive adjustments */
+@media (max-width: 700px) {
+  .rancho-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .rancho-modal-content.rancho-expanded {
+    max-width: 95%;
+    padding: 15px;
+  }
+
+  .rancho-row {
+    flex-direction: column;
+    gap: 5px;
+  }
 }

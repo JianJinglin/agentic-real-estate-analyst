@@ -259,43 +259,85 @@
         </div>
       `;
     } else {
-      const cashflowClass = result.monthlyCashflow >= 0 ? 'positive' : 'negative';
+      const cashflow10Class = result.monthlyCashflow10 >= 0 ? 'positive' : 'negative';
+      const cashflow30Class = result.monthlyCashflow30 >= 0 ? 'positive' : 'negative';
       modal.innerHTML = `
-        <div class="rancho-modal-content">
+        <div class="rancho-modal-content rancho-expanded">
           <span class="rancho-close">&times;</span>
           <h2>🏠 Rancho Cashflow Analysis</h2>
 
-          <div class="rancho-section">
-            <h3>📍 Property Info</h3>
-            <p><strong>Address:</strong> ${result.address || 'N/A'}</p>
-            <p><strong>Price:</strong> $${result.price?.toLocaleString() || 'N/A'}</p>
-            <p><strong>Layout:</strong> ${result.bedrooms || 0} bed ${result.bathrooms || 0} bath ${result.sqft?.toLocaleString() || 0} sqft</p>
+          <div class="rancho-grid">
+            <div class="rancho-section">
+              <h3>📍 Property Info</h3>
+              <p><strong>Address:</strong> ${result.address || 'N/A'}</p>
+              <p><strong>Type:</strong> ${result.propertyType || 'Single Family'}</p>
+              <p><strong>Layout:</strong> ${result.bedrooms || 0} bed ${result.bathrooms || 0} bath</p>
+              <p><strong>Size:</strong> ${result.sqft?.toLocaleString() || 0} sqft</p>
+              <p><strong>Year Built:</strong> ${result.yearBuilt || 'N/A'}</p>
+            </div>
+
+            <div class="rancho-section">
+              <h3>💵 Purchase & Loan</h3>
+              <p><strong>Price:</strong> $${result.price?.toLocaleString() || 'N/A'}</p>
+              <p><strong>Down Payment:</strong> ${result.downPaymentPercent}% ($${result.downPayment?.toLocaleString()})</p>
+              <p><strong>Loan Amount:</strong> $${result.loanAmount?.toLocaleString()}</p>
+              <p><strong>LTV:</strong> ${result.ltv}%</p>
+              <p><strong>Rate:</strong> ${result.assumptions?.interestRate}% / ${result.assumptions?.loanTermYears}yr</p>
+            </div>
           </div>
 
           <div class="rancho-section">
-            <h3>💰 Monthly Income & Expenses</h3>
-            <p><strong>Estimated Rent:</strong> $${result.monthlyRent?.toLocaleString() || 'N/A'}</p>
-            <p><strong>Mortgage (P&I):</strong> -$${result.monthlyMortgage?.toLocaleString() || 'N/A'}</p>
-            <p><strong>Property Tax:</strong> -$${result.monthlyTax?.toLocaleString() || 'N/A'}</p>
-            <p><strong>Insurance:</strong> -$${result.monthlyInsurance?.toLocaleString() || 'N/A'}</p>
-            <p><strong>HOA:</strong> -$${result.monthlyHoa?.toLocaleString() || '0'}</p>
-            <p><strong>Maintenance Reserve:</strong> -$${result.monthlyMaintenance?.toLocaleString() || 'N/A'}</p>
-            <p><strong>Vacancy Reserve:</strong> -$${result.monthlyVacancy?.toLocaleString() || 'N/A'}</p>
+            <h3>🏠 Monthly Rent Income</h3>
+            <div class="rancho-row">
+              <p><strong>Monthly Rent:</strong> <span class="highlight-green">$${result.monthlyRent?.toLocaleString()}</span></p>
+              <p><strong>Rent/sqft:</strong> $${result.rentPerSqft}/sqft</p>
+              <p><strong>Appreciation:</strong> ${result.appreciationRate}%/yr</p>
+            </div>
+          </div>
+
+          <div class="rancho-section">
+            <h3>📤 Monthly Expenses</h3>
+            <table class="rancho-table">
+              <tr><td>Mortgage (P&I)</td><td class="num">$${result.monthlyMortgage?.toLocaleString()}</td></tr>
+              <tr><td>Property Tax</td><td class="num">$${result.monthlyTax?.toLocaleString()}</td></tr>
+              <tr><td>Insurance</td><td class="num">$${result.monthlyInsurance?.toLocaleString()}</td></tr>
+              <tr><td>Maintenance (${result.assumptions?.maintenancePercent}% rent)</td><td class="num">$${result.monthlyMaintenance?.toLocaleString()}</td></tr>
+              <tr><td>Property Mgmt (${result.assumptions?.propertyManagementPercent}% rent)</td><td class="num">$${result.monthlyManagement?.toLocaleString()}</td></tr>
+              <tr><td>HOA</td><td class="num">$${result.monthlyHoa?.toLocaleString()}</td></tr>
+              <tr><td>PMI (LTV>${80}%)</td><td class="num">$${result.monthlyPMI?.toLocaleString()}</td></tr>
+              <tr class="total"><td><strong>Total Expenses</strong></td><td class="num"><strong>$${result.totalMonthlyExpenses?.toLocaleString()}</strong></td></tr>
+            </table>
           </div>
 
           <div class="rancho-section rancho-result">
-            <h3>📊 Cashflow Results</h3>
-            <p class="cashflow ${cashflowClass}">
-              <strong>Monthly Cashflow:</strong> $${result.monthlyCashflow?.toLocaleString() || 'N/A'}
-            </p>
-            <p><strong>Annual Cashflow:</strong> $${result.annualCashflow?.toLocaleString() || 'N/A'}</p>
-            <p><strong>Cash on Cash Return:</strong> ${result.cashOnCashReturn?.toFixed(2) || 'N/A'}%</p>
-            <p><strong>Cap Rate:</strong> ${result.capRate?.toFixed(2) || 'N/A'}%</p>
+            <h3>📊 Cashflow Analysis</h3>
+            <table class="rancho-table">
+              <tr><td>Pre-Tax Cashflow</td><td class="num">$${result.preTaxCashflow?.toLocaleString()}/mo</td></tr>
+              <tr><td>Income Tax @10%</td><td class="num">-$${result.monthlyIncomeTax10?.toLocaleString()}</td></tr>
+              <tr class="highlight ${cashflow10Class}"><td><strong>Cashflow @10% Tax</strong></td><td class="num"><strong>$${result.monthlyCashflow10?.toLocaleString()}/mo</strong></td></tr>
+              <tr><td>Income Tax @30%</td><td class="num">-$${result.monthlyIncomeTax30?.toLocaleString()}</td></tr>
+              <tr class="highlight ${cashflow30Class}"><td><strong>Cashflow @30% Tax</strong></td><td class="num"><strong>$${result.monthlyCashflow30?.toLocaleString()}/mo</strong></td></tr>
+            </table>
           </div>
 
           <div class="rancho-section">
+            <h3>📈 Returns (Annual)</h3>
+            <table class="rancho-table">
+              <tr><td>Annual Cashflow @10%</td><td class="num">$${result.annualCashflow10?.toLocaleString()}</td></tr>
+              <tr><td>Annual Cashflow @30%</td><td class="num">$${result.annualCashflow30?.toLocaleString()}</td></tr>
+              <tr><td>Annual Appreciation</td><td class="num">$${result.annualAppreciation?.toLocaleString()}</td></tr>
+              <tr class="divider"><td colspan="2"></td></tr>
+              <tr><td><strong>Cashflow APY @10%</strong></td><td class="num highlight-blue">${result.cashflowAPY10?.toFixed(2)}%</td></tr>
+              <tr><td><strong>Cashflow APY @30%</strong></td><td class="num">${result.cashflowAPY30?.toFixed(2)}%</td></tr>
+              <tr><td><strong>5-Year APY @10%</strong></td><td class="num highlight-blue">${result.fiveYearAPY10?.toFixed(2)}%</td></tr>
+              <tr><td><strong>5-Year APY @30%</strong></td><td class="num">${result.fiveYearAPY30?.toFixed(2)}%</td></tr>
+              <tr><td>Cap Rate</td><td class="num">${result.capRate?.toFixed(2)}%</td></tr>
+            </table>
+          </div>
+
+          <div class="rancho-section rancho-assumptions">
             <h3>⚙️ Assumptions</h3>
-            <p>Down Payment: ${result.assumptions?.downPaymentPercent}% | Rate: ${result.assumptions?.interestRate}% | Term: ${result.assumptions?.loanTermYears} years</p>
+            <p>DP: ${result.assumptions?.downPaymentPercent}% | Rate: ${result.assumptions?.interestRate}% | Tax: ${result.assumptions?.propertyTaxRate}% | Ins: ${result.assumptions?.insuranceRate}% | Maint: ${result.assumptions?.maintenancePercent}% | Mgmt: ${result.assumptions?.propertyManagementPercent}% | PMI: ${result.assumptions?.mortgageInsuranceRate}%</p>
           </div>
 
           <div class="rancho-actions">

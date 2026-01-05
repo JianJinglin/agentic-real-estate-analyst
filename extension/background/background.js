@@ -2,23 +2,29 @@
 
 // Default assumptions
 const DEFAULT_ASSUMPTIONS = {
-  downPaymentPercent: 20,      // Down payment 20%
-  interestRate: 7.0,           // Interest rate 7%
-  loanTermYears: 30,           // Loan term 30 years
-  propertyTaxRate: 1.25,       // Property tax rate 1.25%/year
-  insuranceRate: 0.5,          // Insurance rate 0.5%/year
-  maintenanceRate: 1,          // Maintenance 1%/year
-  vacancyRate: 5,              // Vacancy rate 5%
-  propertyManagementRate: 0    // Property management 0% (self-managed)
+  downPaymentPercent: 3.5,       // Down payment 3.5%
+  interestRate: 6.0,             // Interest rate 6%
+  loanTermYears: 30,             // Loan term 30 years
+  propertyTaxRate: 2.5,          // Property tax rate 2.5%/year
+  insuranceRate: 0.3,            // Insurance rate 0.3%/year (price * 0.003)
+  maintenancePercent: 5,         // Maintenance 5% of monthly rent
+  vacancyRate: 0,                // Vacancy rate 0%
+  propertyManagementPercent: 10, // Property management 10% of rent
+  incomeTaxRate: 10,             // Income tax rate 10%
+  highIncomeTaxRate: 30,         // High income tax rate 30%
+  mortgageInsuranceRate: 0.75,   // PMI rate 0.75%/year
+  appreciationRate: 3            // Annual property appreciation 3%
 };
 
 // Calculate cashflow
 function calculateCashflow(propertyData, assumptions = DEFAULT_ASSUMPTIONS) {
   const price = propertyData.price || 0;
   const monthlyRent = propertyData.zestimateRent || estimateRent(propertyData);
+  const sqft = propertyData.sqft || 0;
 
   // Loan calculation
-  const downPayment = price * (assumptions.downPaymentPercent / 100);
+  const downPaymentPercent = assumptions.downPaymentPercent;
+  const downPayment = price * (downPaymentPercent / 100);
   const loanAmount = price - downPayment;
   const monthlyInterestRate = (assumptions.interestRate / 100) / 12;
   const numberOfPayments = assumptions.loanTermYears * 12;
@@ -35,28 +41,63 @@ function calculateCashflow(propertyData, assumptions = DEFAULT_ASSUMPTIONS) {
   const monthlyTax = propertyData.propertyTax || (price * (assumptions.propertyTaxRate / 100) / 12);
   const monthlyInsurance = propertyData.insurance || (price * (assumptions.insuranceRate / 100) / 12);
   const monthlyHoa = propertyData.hoaFee || 0;
-  const monthlyMaintenance = price * (assumptions.maintenanceRate / 100) / 12;
+  const monthlyMaintenance = monthlyRent * (assumptions.maintenancePercent / 100);
   const monthlyVacancy = monthlyRent * (assumptions.vacancyRate / 100);
-  const monthlyManagement = monthlyRent * (assumptions.propertyManagementRate / 100);
+  const monthlyManagement = monthlyRent * (assumptions.propertyManagementPercent / 100);
 
-  // Total monthly expenses
+  // PMI calculation: IF LTV > 80%, PMI = loan * 0.75% / 12, else 0
+  const ltv = loanAmount / price;
+  const monthlyPMI = ltv > 0.8 ? (loanAmount * (assumptions.mortgageInsuranceRate / 100) / 12) : 0;
+
+  // Total monthly expenses (before tax)
   const totalMonthlyExpenses = monthlyMortgage + monthlyTax + monthlyInsurance +
-                               monthlyHoa + monthlyMaintenance + monthlyVacancy + monthlyManagement;
+                               monthlyHoa + monthlyMaintenance + monthlyVacancy +
+                               monthlyManagement + monthlyPMI;
 
-  // Monthly cashflow
-  const monthlyCashflow = monthlyRent - totalMonthlyExpenses;
-  const annualCashflow = monthlyCashflow * 12;
+  // Gross monthly income (rent - operating expenses, before mortgage)
+  const operatingExpenses = monthlyTax + monthlyInsurance + monthlyHoa +
+                            monthlyMaintenance + monthlyVacancy + monthlyManagement;
+  const grossMonthlyIncome = monthlyRent - operatingExpenses;
 
-  // NOI (Net Operating Income) - excluding loan
-  const annualNOI = (monthlyRent * 12) -
-                    ((monthlyTax + monthlyInsurance + monthlyHoa + monthlyMaintenance + monthlyVacancy + monthlyManagement) * 12);
+  // Pre-tax cashflow (income - all expenses including mortgage and PMI)
+  const preTaxCashflow = monthlyRent - totalMonthlyExpenses;
+
+  // Income tax calculations (on gross rental income minus expenses)
+  const taxableIncome = Math.max(0, preTaxCashflow);
+  const monthlyIncomeTax10 = taxableIncome * (assumptions.incomeTaxRate / 100);
+  const monthlyIncomeTax30 = taxableIncome * (assumptions.highIncomeTaxRate / 100);
+
+  // After-tax cashflow
+  const monthlyCashflow10 = preTaxCashflow - monthlyIncomeTax10;
+  const monthlyCashflow30 = preTaxCashflow - monthlyIncomeTax30;
+
+  const annualCashflow10 = monthlyCashflow10 * 12;
+  const annualCashflow30 = monthlyCashflow30 * 12;
+
+  // NOI (Net Operating Income) - excluding loan/PMI/taxes
+  const annualNOI = (monthlyRent - operatingExpenses) * 12;
 
   // Cap Rate
   const capRate = price > 0 ? (annualNOI / price) * 100 : 0;
 
-  // Cash on Cash Return
-  const totalCashInvested = downPayment + (price * 0.03); // Down payment + ~3% closing costs
-  const cashOnCashReturn = totalCashInvested > 0 ? (annualCashflow / totalCashInvested) * 100 : 0;
+  // Cashflow APY (annual cashflow / down payment)
+  const cashflowAPY10 = downPayment > 0 ? (annualCashflow10 / downPayment) * 100 : 0;
+  const cashflowAPY30 = downPayment > 0 ? (annualCashflow30 / downPayment) * 100 : 0;
+
+  // 5-year APY (cashflow + appreciation)
+  const annualAppreciation = price * (assumptions.appreciationRate / 100);
+  const fiveYearCashflow10 = annualCashflow10 * 5;
+  const fiveYearCashflow30 = annualCashflow30 * 5;
+  const fiveYearAppreciation = annualAppreciation * 5;
+  const fiveYearAPY10 = downPayment > 0 ? ((fiveYearCashflow10 + fiveYearAppreciation) / downPayment) * 100 / 5 : 0;
+  const fiveYearAPY30 = downPayment > 0 ? ((fiveYearCashflow30 + fiveYearAppreciation) / downPayment) * 100 / 5 : 0;
+
+  // Rent per sqft
+  const rentPerSqft = sqft > 0 ? monthlyRent / sqft : 0;
+
+  // Total cash invested (for reference)
+  const closingCosts = price * 0.03;
+  const totalCashInvested = downPayment + closingCosts;
 
   return {
     // Property info
@@ -67,30 +108,52 @@ function calculateCashflow(propertyData, assumptions = DEFAULT_ASSUMPTIONS) {
     bathrooms: propertyData.bathrooms,
     sqft: propertyData.sqft,
     yearBuilt: propertyData.yearBuilt,
+    propertyType: propertyData.propertyType || '',
+    neighborhood: propertyData.neighborhood || '',
 
     // Income
     monthlyRent: Math.round(monthlyRent),
+    rentPerSqft: rentPerSqft.toFixed(2),
+
+    // Loan info
+    downPaymentPercent: downPaymentPercent,
+    downPayment: Math.round(downPayment),
+    loanAmount: Math.round(loanAmount),
+    ltv: (ltv * 100).toFixed(1),
+    totalCashInvested: Math.round(totalCashInvested),
 
     // Expense breakdown
     monthlyMortgage: Math.round(monthlyMortgage),
     monthlyTax: Math.round(monthlyTax),
     monthlyInsurance: Math.round(monthlyInsurance),
-    monthlyHoa: Math.round(monthlyHoa),
     monthlyMaintenance: Math.round(monthlyMaintenance),
-    monthlyVacancy: Math.round(monthlyVacancy),
     monthlyManagement: Math.round(monthlyManagement),
+    monthlyHoa: Math.round(monthlyHoa),
+    monthlyPMI: Math.round(monthlyPMI),
+    monthlyVacancy: Math.round(monthlyVacancy),
+    totalMonthlyExpenses: Math.round(totalMonthlyExpenses),
 
-    // Results
-    monthlyCashflow: Math.round(monthlyCashflow),
-    annualCashflow: Math.round(annualCashflow),
+    // Income calculations
+    grossMonthlyIncome: Math.round(grossMonthlyIncome),
+    preTaxCashflow: Math.round(preTaxCashflow),
+    monthlyIncomeTax10: Math.round(monthlyIncomeTax10),
+    monthlyIncomeTax30: Math.round(monthlyIncomeTax30),
+    monthlyCashflow10: Math.round(monthlyCashflow10),
+    monthlyCashflow30: Math.round(monthlyCashflow30),
+
+    // Annual results
+    annualCashflow10: Math.round(annualCashflow10),
+    annualCashflow30: Math.round(annualCashflow30),
     annualNOI: Math.round(annualNOI),
-    capRate: capRate,
-    cashOnCashReturn: cashOnCashReturn,
 
-    // Loan info
-    downPayment: Math.round(downPayment),
-    loanAmount: Math.round(loanAmount),
-    totalCashInvested: Math.round(totalCashInvested),
+    // Returns
+    capRate: capRate,
+    cashflowAPY10: cashflowAPY10,
+    cashflowAPY30: cashflowAPY30,
+    fiveYearAPY10: fiveYearAPY10,
+    fiveYearAPY30: fiveYearAPY30,
+    appreciationRate: assumptions.appreciationRate,
+    annualAppreciation: Math.round(annualAppreciation),
 
     // Assumptions
     assumptions: assumptions,
@@ -145,21 +208,34 @@ async function addToGitHubCSV(result) {
     // File doesn't exist, will create new file
   }
 
-  // CSV headers
-  const headers = 'Date,Address,Price,Beds,Baths,Sqft,Monthly Rent,Monthly Cashflow,Annual Cashflow,CoC Return,Cap Rate,URL\n';
+  // CSV headers (expanded)
+  const headers = 'Date,Address,Type,Price,DP%,DP$,Beds,Baths,Sqft,Rent/sqft,Monthly Rent,Mortgage,Tax,Insurance,Maint,Mgmt,HOA,PMI,Cashflow@10%,Cashflow@30%,APY@10%,APY@30%,5yr APY@10%,Cap Rate,URL\n';
 
-  // New row data
+  // New row data (expanded)
   const newRow = [
     new Date().toLocaleDateString(),
     `"${result.address || ''}"`,
+    result.propertyType || 'SFR',
     result.price || 0,
+    (result.downPaymentPercent || 0).toFixed(1) + '%',
+    result.downPayment || 0,
     result.bedrooms || 0,
     result.bathrooms || 0,
     result.sqft || 0,
+    '$' + (result.rentPerSqft || 0),
     result.monthlyRent || 0,
-    result.monthlyCashflow || 0,
-    result.annualCashflow || 0,
-    (result.cashOnCashReturn || 0).toFixed(2) + '%',
+    result.monthlyMortgage || 0,
+    result.monthlyTax || 0,
+    result.monthlyInsurance || 0,
+    result.monthlyMaintenance || 0,
+    result.monthlyManagement || 0,
+    result.monthlyHoa || 0,
+    result.monthlyPMI || 0,
+    result.monthlyCashflow10 || 0,
+    result.monthlyCashflow30 || 0,
+    (result.cashflowAPY10 || 0).toFixed(2) + '%',
+    (result.cashflowAPY30 || 0).toFixed(2) + '%',
+    (result.fiveYearAPY10 || 0).toFixed(2) + '%',
     (result.capRate || 0).toFixed(2) + '%',
     result.url || ''
   ].join(',') + '\n';
@@ -198,12 +274,16 @@ async function addToGitHubCSV(result) {
 // Message listener
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'analyzeProperty') {
-    try {
-      const result = calculateCashflow(request.data);
-      sendResponse({ success: true, result: result });
-    } catch (error) {
-      sendResponse({ success: false, error: error.message });
-    }
+    // Get saved assumptions or use defaults
+    chrome.storage.sync.get(['assumptions'], (stored) => {
+      try {
+        const assumptions = { ...DEFAULT_ASSUMPTIONS, ...(stored.assumptions || {}) };
+        const result = calculateCashflow(request.data, assumptions);
+        sendResponse({ success: true, result: result });
+      } catch (error) {
+        sendResponse({ success: false, error: error.message });
+      }
+    });
     return true;
   }
 
@@ -216,7 +296,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   if (request.action === 'getAssumptions') {
     chrome.storage.sync.get(['assumptions'], (result) => {
-      sendResponse({ assumptions: result.assumptions || DEFAULT_ASSUMPTIONS });
+      sendResponse({ assumptions: { ...DEFAULT_ASSUMPTIONS, ...(result.assumptions || {}) } });
     });
     return true;
   }
