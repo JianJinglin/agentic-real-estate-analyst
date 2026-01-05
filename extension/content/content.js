@@ -382,7 +382,15 @@
     const copyBtn = modal.querySelector('#rancho-copy');
     if (copyBtn) {
       copyBtn.addEventListener('click', () => {
-        const text = `Property: ${result.address}\nPrice: $${result.price?.toLocaleString()}\nMonthly Cashflow: $${result.monthlyCashflow?.toLocaleString()}\nCoC Return: ${result.cashOnCashReturn?.toFixed(2)}%`;
+        const text = `Property: ${result.address}
+Price: $${result.price?.toLocaleString()}
+${result.bedrooms} bed ${result.bathrooms} bath ${result.sqft?.toLocaleString()} sqft
+Monthly Rent: $${result.monthlyRent?.toLocaleString()}
+Cashflow @10%: $${result.monthlyCashflow10?.toLocaleString()}/mo
+Cashflow @30%: $${result.monthlyCashflow30?.toLocaleString()}/mo
+Cashflow APY @10%: ${result.cashflowAPY10?.toFixed(2)}%
+5-Year APY @10%: ${result.fiveYearAPY10?.toFixed(2)}%
+Cap Rate: ${result.capRate?.toFixed(2)}%`;
         navigator.clipboard.writeText(text);
         copyBtn.textContent = '✅ Copied!';
       });
