@@ -1,105 +1,105 @@
-# 🏠 小R - Real Estate Analyst
+# Rancho - Real Estate Analyst
 
-**Zillow 房产现金流分析 Chrome 扩展**
+**Zillow Property Cashflow Analysis Chrome Extension**
 
-在浏览 Zillow 房产时，一键分析现金流，快速筛选投资房产。
+Analyze property cashflow with one click while browsing Zillow listings. Quickly screen investment properties.
 
-## ✨ 功能特点
+## Features
 
-- 📊 **一键分析**: 在 Zillow 房产详情页点击"小R"按钮，立即获取现金流分析
-- 💰 **全面计算**: 月供、房产税、保险、HOA、维护费、空置率一目了然
-- 📈 **关键指标**: 月现金流、年现金流、CoC回报率、Cap Rate
-- 📋 **导出功能**: 一键保存到 GitHub CSV，便于跟踪对比
-- ⚙️ **自定义参数**: 可调整首付比例、利率、费用假设等
+- **One-Click Analysis**: Click the "Rancho" button on any Zillow property detail page for instant cashflow analysis
+- **Comprehensive Calculations**: Mortgage, property tax, insurance, HOA, maintenance, and vacancy all at a glance
+- **Key Metrics**: Monthly cashflow, annual cashflow, Cash-on-Cash return, Cap Rate
+- **Export Feature**: One-click save to GitHub CSV for tracking and comparison
+- **Customizable Parameters**: Adjust down payment, interest rate, expense assumptions, and more
 
-## 🚀 安装方法
+## Installation
 
-### 开发者模式安装
+### Developer Mode Installation
 
-1. 下载本项目到本地
-2. 打开 Chrome，访问 `chrome://extensions/`
-3. 开启右上角「开发者模式」
-4. 点击「加载已解压的扩展程序」
-5. 选择 `extension` 文件夹
+1. Download this project to your local machine
+2. Open Chrome and navigate to `chrome://extensions/`
+3. Enable "Developer mode" in the top right corner
+4. Click "Load unpacked"
+5. Select the `extension` folder
 
-### 生成图标
+### Generate Icons
 
 ```bash
 cd extension/icons
-# 使用 rsvg-convert 生成 PNG 图标
+# Use rsvg-convert to generate PNG icons
 rsvg-convert -w 16 -h 16 icon.svg > icon16.png
 rsvg-convert -w 48 -h 48 icon.svg > icon48.png
 rsvg-convert -w 128 -h 128 icon.svg > icon128.png
 ```
 
-## 📖 使用说明
+## Usage
 
-### 1️⃣ 配置 GitHub (可选)
+### 1. Configure GitHub (Optional)
 
-1. 点击扩展图标打开设置面板
-2. 填写 GitHub Token ([获取方法](https://github.com/settings/tokens))
-3. 填写仓库名 (如 `JianJinglin/agentic-real-estate-analyst`)
-4. 设置 CSV 文件路径 (默认 `data/properties.csv`)
+1. Click the extension icon to open the settings panel
+2. Enter your GitHub Token ([How to get one](https://github.com/settings/tokens))
+3. Enter your repository name (e.g., `JianJinglin/agentic-real-estate-analyst`)
+4. Set the CSV file path (default: `data/properties.csv`)
 
-### 2️⃣ 分析房产
+### 2. Analyze Properties
 
-1. 打开 [Zillow](https://www.zillow.com) 任意房产详情页
-2. 点击页面上的 「🏠 小R」按钮
-3. 查看现金流分析结果
-4. 点击「添加到我的Excel」保存数据
+1. Open any property detail page on [Zillow](https://www.zillow.com)
+2. Click the "Rancho" button on the page
+3. View the cashflow analysis results
+4. Click "Add to My Excel" to save the data
 
-### 3️⃣ 自定义参数
+### 3. Customize Parameters
 
-在扩展设置 > 参数页面可调整:
+In Extension Settings > Parameters tab, you can adjust:
 
-| 参数 | 默认值 | 说明 |
-|------|--------|------|
-| 首付比例 | 20% | Down payment |
-| 贷款利率 | 7.0% | Interest rate |
-| 贷款期限 | 30年 | Loan term |
-| 房产税率 | 1.25%/年 | Property tax |
-| 保险费率 | 0.5%/年 | Insurance |
-| 维护费率 | 1%/年 | Maintenance reserve |
-| 空置率 | 5% | Vacancy rate |
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| Down Payment | 20% | Down payment percentage |
+| Interest Rate | 7.0% | Loan interest rate |
+| Loan Term | 30 years | Loan term |
+| Property Tax | 1.25%/year | Property tax rate |
+| Insurance | 0.5%/year | Insurance rate |
+| Maintenance | 1%/year | Maintenance reserve |
+| Vacancy | 5% | Vacancy rate |
 
-## 📊 计算公式
+## Calculation Formulas
 
 ```
-月现金流 = 月租金 - 月供 - 房产税 - 保险 - HOA - 维护预留 - 空置预留
+Monthly Cashflow = Rent - Mortgage - Property Tax - Insurance - HOA - Maintenance Reserve - Vacancy Reserve
 
-CoC回报率 = 年现金流 / 总投入现金 × 100%
+CoC Return = Annual Cashflow / Total Cash Invested x 100%
 
-Cap Rate = 年NOI / 房价 × 100%
+Cap Rate = Annual NOI / Price x 100%
 
-NOI = 年租金收入 - 年运营费用 (不含贷款)
+NOI = Annual Rent Income - Annual Operating Expenses (excluding loan)
 ```
 
-## 📁 项目结构
+## Project Structure
 
 ```
 extension/
-├── manifest.json          # 扩展配置
+├── manifest.json          # Extension configuration
 ├── background/
-│   └── background.js      # 后台服务 & 计算逻辑
+│   └── background.js      # Background service & calculation logic
 ├── content/
-│   ├── content.js         # Zillow 页面注入脚本
-│   └── content.css        # 注入样式
+│   ├── content.js         # Zillow page injection script
+│   └── content.css        # Injected styles
 ├── popup/
-│   ├── popup.html         # 设置面板
-│   ├── popup.css          # 设置样式
-│   └── popup.js           # 设置逻辑
+│   ├── popup.html         # Settings panel
+│   ├── popup.css          # Settings styles
+│   └── popup.js           # Settings logic
 └── icons/
-    └── icon.svg           # 图标源文件
+    └── icon.svg           # Icon source file
 ```
 
-## 🔗 相关链接
+## Links
 
-- [Notion 项目页面](https://www.notion.so/jianjinglin/AI-2116f2ec284680029263c3c428733b6a)
+- [Notion Project Page](https://www.notion.so/jianjinglin/AI-2116f2ec284680029263c3c428733b6a)
 
-## 📝 License
+## License
 
 MIT License
 
 ---
 
-Made with ❤️ for real estate investors
+Made with love for real estate investors

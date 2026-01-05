@@ -1,29 +1,29 @@
 // Background Service Worker
 
-// 默认假设参数
+// Default assumptions
 const DEFAULT_ASSUMPTIONS = {
-  downPaymentPercent: 20,      // 首付比例 20%
-  interestRate: 7.0,           // 贷款利率 7%
-  loanTermYears: 30,           // 贷款期限 30年
-  propertyTaxRate: 1.25,       // 房产税率 1.25%/年
-  insuranceRate: 0.5,          // 保险率 0.5%/年
-  maintenanceRate: 1,          // 维护费 1%/年
-  vacancyRate: 5,              // 空置率 5%
-  propertyManagementRate: 0    // 物业管理费 0% (自己管理)
+  downPaymentPercent: 20,      // Down payment 20%
+  interestRate: 7.0,           // Interest rate 7%
+  loanTermYears: 30,           // Loan term 30 years
+  propertyTaxRate: 1.25,       // Property tax rate 1.25%/year
+  insuranceRate: 0.5,          // Insurance rate 0.5%/year
+  maintenanceRate: 1,          // Maintenance 1%/year
+  vacancyRate: 5,              // Vacancy rate 5%
+  propertyManagementRate: 0    // Property management 0% (self-managed)
 };
 
-// 计算现金流
+// Calculate cashflow
 function calculateCashflow(propertyData, assumptions = DEFAULT_ASSUMPTIONS) {
   const price = propertyData.price || 0;
   const monthlyRent = propertyData.zestimateRent || estimateRent(propertyData);
 
-  // 贷款计算
+  // Loan calculation
   const downPayment = price * (assumptions.downPaymentPercent / 100);
   const loanAmount = price - downPayment;
   const monthlyInterestRate = (assumptions.interestRate / 100) / 12;
   const numberOfPayments = assumptions.loanTermYears * 12;
 
-  // 月供 (P&I) - 使用等额本息公式
+  // Monthly payment (P&I) - using amortization formula
   let monthlyMortgage = 0;
   if (loanAmount > 0 && monthlyInterestRate > 0) {
     monthlyMortgage = loanAmount *
@@ -31,7 +31,7 @@ function calculateCashflow(propertyData, assumptions = DEFAULT_ASSUMPTIONS) {
       (Math.pow(1 + monthlyInterestRate, numberOfPayments) - 1);
   }
 
-  // 月度费用
+  // Monthly expenses
   const monthlyTax = propertyData.propertyTax || (price * (assumptions.propertyTaxRate / 100) / 12);
   const monthlyInsurance = propertyData.insurance || (price * (assumptions.insuranceRate / 100) / 12);
   const monthlyHoa = propertyData.hoaFee || 0;
@@ -39,27 +39,27 @@ function calculateCashflow(propertyData, assumptions = DEFAULT_ASSUMPTIONS) {
   const monthlyVacancy = monthlyRent * (assumptions.vacancyRate / 100);
   const monthlyManagement = monthlyRent * (assumptions.propertyManagementRate / 100);
 
-  // 月度总支出
+  // Total monthly expenses
   const totalMonthlyExpenses = monthlyMortgage + monthlyTax + monthlyInsurance +
                                monthlyHoa + monthlyMaintenance + monthlyVacancy + monthlyManagement;
 
-  // 月现金流
+  // Monthly cashflow
   const monthlyCashflow = monthlyRent - totalMonthlyExpenses;
   const annualCashflow = monthlyCashflow * 12;
 
-  // NOI (净营业收入) - 不含贷款
+  // NOI (Net Operating Income) - excluding loan
   const annualNOI = (monthlyRent * 12) -
                     ((monthlyTax + monthlyInsurance + monthlyHoa + monthlyMaintenance + monthlyVacancy + monthlyManagement) * 12);
 
   // Cap Rate
   const capRate = price > 0 ? (annualNOI / price) * 100 : 0;
 
-  // Cash on Cash Return (现金回报率)
-  const totalCashInvested = downPayment + (price * 0.03); // 首付 + 约3%交易费用
+  // Cash on Cash Return
+  const totalCashInvested = downPayment + (price * 0.03); // Down payment + ~3% closing costs
   const cashOnCashReturn = totalCashInvested > 0 ? (annualCashflow / totalCashInvested) * 100 : 0;
 
   return {
-    // 房产信息
+    // Property info
     address: propertyData.address,
     url: propertyData.url,
     price: Math.round(price),
@@ -68,10 +68,10 @@ function calculateCashflow(propertyData, assumptions = DEFAULT_ASSUMPTIONS) {
     sqft: propertyData.sqft,
     yearBuilt: propertyData.yearBuilt,
 
-    // 收入
+    // Income
     monthlyRent: Math.round(monthlyRent),
 
-    // 支出明细
+    // Expense breakdown
     monthlyMortgage: Math.round(monthlyMortgage),
     monthlyTax: Math.round(monthlyTax),
     monthlyInsurance: Math.round(monthlyInsurance),
@@ -80,51 +80,51 @@ function calculateCashflow(propertyData, assumptions = DEFAULT_ASSUMPTIONS) {
     monthlyVacancy: Math.round(monthlyVacancy),
     monthlyManagement: Math.round(monthlyManagement),
 
-    // 结果
+    // Results
     monthlyCashflow: Math.round(monthlyCashflow),
     annualCashflow: Math.round(annualCashflow),
     annualNOI: Math.round(annualNOI),
     capRate: capRate,
     cashOnCashReturn: cashOnCashReturn,
 
-    // 贷款信息
+    // Loan info
     downPayment: Math.round(downPayment),
     loanAmount: Math.round(loanAmount),
     totalCashInvested: Math.round(totalCashInvested),
 
-    // 假设参数
+    // Assumptions
     assumptions: assumptions,
 
-    // 时间戳
+    // Timestamp
     analyzedAt: new Date().toISOString()
   };
 }
 
-// 估算租金 (如果 Zillow 没有提供)
+// Estimate rent (if Zillow doesn't provide)
 function estimateRent(propertyData) {
-  // 简单估算: 房价的 0.8% 作为月租金 (1% 规则的保守版)
+  // Simple estimation: 0.8% of price as monthly rent (conservative version of 1% rule)
   const baseRent = propertyData.price * 0.008;
 
-  // 根据卧室数量调整
+  // Adjust based on bedroom count
   const bedroomAdjustment = (propertyData.bedrooms || 2) * 50;
 
   return Math.round(baseRent + bedroomAdjustment);
 }
 
-// 添加到 GitHub CSV
+// Add to GitHub CSV
 async function addToGitHubCSV(result) {
-  // 从存储中获取 GitHub 配置
+  // Get GitHub config from storage
   const config = await chrome.storage.sync.get(['githubToken', 'githubRepo', 'githubPath']);
 
   if (!config.githubToken || !config.githubRepo) {
-    throw new Error('请先在扩展设置中配置 GitHub Token 和仓库信息');
+    throw new Error('Please configure GitHub Token and repository in extension settings first');
   }
 
   const token = config.githubToken;
-  const repo = config.githubRepo; // 格式: owner/repo
+  const repo = config.githubRepo; // Format: owner/repo
   const filePath = config.githubPath || 'data/properties.csv';
 
-  // 获取现有文件内容
+  // Get existing file content
   let existingContent = '';
   let sha = null;
 
@@ -142,13 +142,13 @@ async function addToGitHubCSV(result) {
       sha = fileData.sha;
     }
   } catch (e) {
-    // 文件不存在，将创建新文件
+    // File doesn't exist, will create new file
   }
 
-  // CSV 头部
+  // CSV headers
   const headers = 'Date,Address,Price,Beds,Baths,Sqft,Monthly Rent,Monthly Cashflow,Annual Cashflow,CoC Return,Cap Rate,URL\n';
 
-  // 新行数据
+  // New row data
   const newRow = [
     new Date().toLocaleDateString(),
     `"${result.address || ''}"`,
@@ -164,7 +164,7 @@ async function addToGitHubCSV(result) {
     result.url || ''
   ].join(',') + '\n';
 
-  // 组合内容
+  // Combine content
   let newContent;
   if (!existingContent) {
     newContent = headers + newRow;
@@ -172,7 +172,7 @@ async function addToGitHubCSV(result) {
     newContent = existingContent + newRow;
   }
 
-  // 更新/创建文件
+  // Update/create file
   const updateResponse = await fetch(`https://api.github.com/repos/${repo}/contents/${filePath}`, {
     method: 'PUT',
     headers: {
@@ -189,13 +189,13 @@ async function addToGitHubCSV(result) {
 
   if (!updateResponse.ok) {
     const error = await updateResponse.json();
-    throw new Error(error.message || '更新 GitHub 失败');
+    throw new Error(error.message || 'Failed to update GitHub');
   }
 
   return { success: true };
 }
 
-// 消息监听器
+// Message listener
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'analyzeProperty') {
     try {
@@ -211,7 +211,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     addToGitHubCSV(request.data)
       .then(result => sendResponse({ success: true }))
       .catch(error => sendResponse({ success: false, error: error.message }));
-    return true; // 保持消息通道开放
+    return true; // Keep message channel open
   }
 
   if (request.action === 'getAssumptions') {

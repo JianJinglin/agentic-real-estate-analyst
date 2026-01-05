@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Real Estate Analyst - 小R",
+  "name": "Rancho - Real Estate Analyst",
   "version": "1.0.0",
-  "description": "Zillow房产现金流分析工具",
+  "description": "Zillow Property Cashflow Analysis Tool",
   "permissions": [
     "activeTab",
     "storage"

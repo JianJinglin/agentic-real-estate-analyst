@@ -1,116 +1,116 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Rancho - 房产分析</title>
+  <title>Rancho - Property Analysis</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
   <div class="container">
     <header>
       <h1>🏠 Rancho</h1>
-      <p>房产现金流分析工具</p>
+      <p>Property Cashflow Analysis Tool</p>
     </header>
 
     <div class="tabs">
-      <button class="tab active" data-tab="settings">⚙️ 设置</button>
-      <button class="tab" data-tab="assumptions">📊 参数</button>
-      <button class="tab" data-tab="help">❓ 帮助</button>
+      <button class="tab active" data-tab="settings">⚙️ Settings</button>
+      <button class="tab" data-tab="assumptions">📊 Parameters</button>
+      <button class="tab" data-tab="help">❓ Help</button>
     </div>
 
-    <!-- 设置页 -->
+    <!-- Settings Tab -->
     <div class="tab-content active" id="settings">
       <div class="section">
-        <h3>🔗 GitHub 连接</h3>
+        <h3>🔗 GitHub Connection</h3>
         <div class="form-group">
           <label>GitHub Token</label>
           <input type="password" id="github-token" placeholder="ghp_xxxx...">
-          <small>需要 repo 权限的 Personal Access Token</small>
+          <small>Personal Access Token with repo permission</small>
         </div>
         <div class="form-group">
-          <label>仓库 (owner/repo)</label>
+          <label>Repository (owner/repo)</label>
           <input type="text" id="github-repo" placeholder="JianJinglin/agentic-real-estate-analyst">
         </div>
         <div class="form-group">
-          <label>CSV 文件路径</label>
+          <label>CSV File Path</label>
           <input type="text" id="github-path" placeholder="data/properties.csv">
         </div>
-        <button id="save-github" class="btn-primary">💾 保存配置</button>
+        <button id="save-github" class="btn-primary">💾 Save Config</button>
         <div id="github-status" class="status"></div>
       </div>
     </div>
 
-    <!-- 假设参数页 -->
+    <!-- Assumptions Tab -->
     <div class="tab-content" id="assumptions">
       <div class="section">
-        <h3>💰 贷款参数</h3>
+        <h3>💰 Loan Parameters</h3>
         <div class="form-group">
-          <label>首付比例 (%)</label>
+          <label>Down Payment (%)</label>
           <input type="number" id="down-payment" value="20" min="0" max="100">
         </div>
         <div class="form-group">
-          <label>贷款利率 (%)</label>
+          <label>Interest Rate (%)</label>
           <input type="number" id="interest-rate" value="7.0" step="0.1" min="0">
         </div>
         <div class="form-group">
-          <label>贷款期限 (年)</label>
+          <label>Loan Term (years)</label>
           <input type="number" id="loan-term" value="30" min="1" max="40">
         </div>
       </div>
 
       <div class="section">
-        <h3>🏦 费用参数</h3>
+        <h3>🏦 Expense Parameters</h3>
         <div class="form-group">
-          <label>房产税率 (%/年)</label>
+          <label>Property Tax Rate (%/year)</label>
           <input type="number" id="property-tax" value="1.25" step="0.01" min="0">
         </div>
         <div class="form-group">
-          <label>保险费率 (%/年)</label>
+          <label>Insurance Rate (%/year)</label>
           <input type="number" id="insurance-rate" value="0.5" step="0.01" min="0">
         </div>
         <div class="form-group">
-          <label>维护费率 (%/年)</label>
+          <label>Maintenance Rate (%/year)</label>
           <input type="number" id="maintenance-rate" value="1" step="0.1" min="0">
         </div>
         <div class="form-group">
-          <label>空置率 (%)</label>
+          <label>Vacancy Rate (%)</label>
           <input type="number" id="vacancy-rate" value="5" step="1" min="0" max="100">
         </div>
       </div>
 
-      <button id="save-assumptions" class="btn-primary">💾 保存参数</button>
-      <button id="reset-assumptions" class="btn-secondary">🔄 重置默认</button>
+      <button id="save-assumptions" class="btn-primary">💾 Save Parameters</button>
+      <button id="reset-assumptions" class="btn-secondary">🔄 Reset to Defaults</button>
       <div id="assumptions-status" class="status"></div>
     </div>
 
-    <!-- 帮助页 -->
+    <!-- Help Tab -->
     <div class="tab-content" id="help">
       <div class="section">
-        <h3>📖 使用说明</h3>
+        <h3>📖 How to Use</h3>
         <ol>
-          <li>打开 Zillow 房产详情页</li>
-          <li>点击页面上的 "🏠 Rancho" 按钮</li>
-          <li>查看现金流分析结果</li>
-          <li>点击 "添加到我的Excel" 保存到 GitHub</li>
+          <li>Open a Zillow property detail page</li>
+          <li>Click the "🏠 Rancho" button on the page</li>
+          <li>View the cashflow analysis results</li>
+          <li>Click "Add to My Excel" to save to GitHub</li>
         </ol>
       </div>
 
       <div class="section">
-        <h3>🔑 获取 GitHub Token</h3>
+        <h3>🔑 Get GitHub Token</h3>
         <ol>
-          <li>访问 <a href="https://github.com/settings/tokens" target="_blank">GitHub Settings > Tokens</a></li>
-          <li>点击 "Generate new token (classic)"</li>
-          <li>勾选 "repo" 权限</li>
-          <li>复制生成的 Token</li>
+          <li>Visit <a href="https://github.com/settings/tokens" target="_blank">GitHub Settings > Tokens</a></li>
+          <li>Click "Generate new token (classic)"</li>
+          <li>Check the "repo" permission</li>
+          <li>Copy the generated Token</li>
         </ol>
       </div>
 
       <div class="section">
-        <h3>📊 计算公式</h3>
-        <p><strong>月现金流</strong> = 月租金 - 月供 - 税 - 保险 - HOA - 维护 - 空置</p>
-        <p><strong>CoC回报率</strong> = 年现金流 / 总投入现金 × 100%</p>
-        <p><strong>Cap Rate</strong> = 年NOI / 房价 × 100%</p>
+        <h3>📊 Calculation Formulas</h3>
+        <p><strong>Monthly Cashflow</strong> = Rent - Mortgage - Tax - Insurance - HOA - Maintenance - Vacancy</p>
+        <p><strong>CoC Return</strong> = Annual Cashflow / Total Cash Invested × 100%</p>
+        <p><strong>Cap Rate</strong> = Annual NOI / Price × 100%</p>
       </div>
     </div>
 

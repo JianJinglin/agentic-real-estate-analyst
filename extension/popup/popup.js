@@ -1,7 +1,7 @@
 // Popup Script
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Tab 切换
+  // Tab switching
   const tabs = document.querySelectorAll('.tab');
   const tabContents = document.querySelectorAll('.tab-content');
 
@@ -15,20 +15,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // 加载已保存的设置
+  // Load saved settings
   loadSettings();
 
-  // 保存 GitHub 配置
+  // Save GitHub config
   document.getElementById('save-github').addEventListener('click', saveGitHubConfig);
 
-  // 保存假设参数
+  // Save assumptions
   document.getElementById('save-assumptions').addEventListener('click', saveAssumptions);
 
-  // 重置假设参数
+  // Reset assumptions
   document.getElementById('reset-assumptions').addEventListener('click', resetAssumptions);
 });
 
-// 加载设置
+// Load settings
 function loadSettings() {
   chrome.storage.sync.get(['githubToken', 'githubRepo', 'githubPath', 'assumptions'], (result) => {
     if (result.githubToken) {
@@ -52,7 +52,7 @@ function loadSettings() {
   });
 }
 
-// 默认参数
+// Default assumptions
 function getDefaultAssumptions() {
   return {
     downPaymentPercent: 20,
@@ -66,14 +66,14 @@ function getDefaultAssumptions() {
   };
 }
 
-// 保存 GitHub 配置
+// Save GitHub config
 function saveGitHubConfig() {
   const token = document.getElementById('github-token').value.trim();
   const repo = document.getElementById('github-repo').value.trim();
   const path = document.getElementById('github-path').value.trim() || 'data/properties.csv';
 
   if (!token || !repo) {
-    showStatus('github-status', 'error', '请填写 Token 和仓库信息');
+    showStatus('github-status', 'error', 'Please fill in Token and Repository');
     return;
   }
 
@@ -82,11 +82,11 @@ function saveGitHubConfig() {
     githubRepo: repo,
     githubPath: path
   }, () => {
-    showStatus('github-status', 'success', '✅ GitHub 配置已保存');
+    showStatus('github-status', 'success', '✅ GitHub config saved');
   });
 }
 
-// 保存假设参数
+// Save assumptions
 function saveAssumptions() {
   const assumptions = {
     downPaymentPercent: parseFloat(document.getElementById('down-payment').value) || 20,
@@ -100,11 +100,11 @@ function saveAssumptions() {
   };
 
   chrome.storage.sync.set({ assumptions }, () => {
-    showStatus('assumptions-status', 'success', '✅ 参数已保存');
+    showStatus('assumptions-status', 'success', '✅ Parameters saved');
   });
 }
 
-// 重置假设参数
+// Reset assumptions
 function resetAssumptions() {
   const defaults = getDefaultAssumptions();
 
@@ -117,11 +117,11 @@ function resetAssumptions() {
   document.getElementById('vacancy-rate').value = defaults.vacancyRate;
 
   chrome.storage.sync.set({ assumptions: defaults }, () => {
-    showStatus('assumptions-status', 'success', '✅ 已重置为默认参数');
+    showStatus('assumptions-status', 'success', '✅ Reset to defaults');
   });
 }
 
-// 显示状态信息
+// Show status message
 function showStatus(elementId, type, message) {
   const statusEl = document.getElementById(elementId);
   statusEl.className = 'status ' + type;
