@@ -13,14 +13,12 @@
 
   // Create Rancho button - fixed at bottom right
   function createRanchoButton() {
-    // Only show button on property detail pages
     if (!isPropertyDetailPage()) {
       const existingBtn = document.getElementById('rancho-btn');
       if (existingBtn) existingBtn.remove();
       return;
     }
 
-    // Remove existing button if any
     const existingBtn = document.getElementById('rancho-btn');
     if (existingBtn) existingBtn.remove();
 
@@ -28,8 +26,6 @@
     btn.id = 'rancho-btn';
     btn.innerHTML = '🏠 Rancho';
     btn.title = 'Analyze property cashflow';
-
-    // Append to body with fixed positioning
     document.body.appendChild(btn);
 
     btn.addEventListener('click', (e) => {
@@ -37,33 +33,6 @@
       e.stopPropagation();
       analyzeProperty();
     });
-  }
-
-  // Parse bathroom count - handles full and half baths
-  function parseBathrooms(text) {
-    if (!text) return 0;
-
-    const lowerText = text.toLowerCase();
-
-    // Handle "X full, Y half" format
-    const fullHalfMatch = lowerText.match(/(\d+)\s*full.*?(\d+)\s*half/i);
-    if (fullHalfMatch) {
-      return parseInt(fullHalfMatch[1]) + (parseInt(fullHalfMatch[2]) * 0.5);
-    }
-
-    // Handle "X.5 ba" or "X ba" format
-    const baMatch = lowerText.match(/([\d.]+)\s*ba/);
-    if (baMatch) {
-      return parseFloat(baMatch[1]);
-    }
-
-    // Handle just a number with decimal
-    const numMatch = text.match(/([\d.]+)/);
-    if (numMatch) {
-      return parseFloat(numMatch[1]);
-    }
-
-    return 0;
   }
 
   // Scrape property data from page
@@ -76,7 +45,6 @@
       bathrooms: 0,
       sqft: 0,
       yearBuilt: 0,
-      propertyType: '',
       zestimateRent: 0,
       hoaFee: 0,
       propertyTax: 0,
@@ -84,171 +52,97 @@
     };
 
     try {
-      // Try to get data from Next.js __NEXT_DATA__ first (most reliable)
+      // 1. Get Address from DOM (most visible element)
+      const addressEl = document.querySelector('h1');
+      if (addressEl) {
+        data.address = addressEl.textContent.trim();
+      }
+
+      // 2. Get Price from DOM
+      const priceEl = document.querySelector('[data-testid="price"]');
+      if (priceEl) {
+        const priceText = priceEl.textContent.replace(/[^0-9]/g, '');
+        data.price = parseInt(priceText) || 0;
+      }
+
+      // 3. Get beds/baths/sqft - look for the summary container
+      const allSpans = document.querySelectorAll('span');
+      allSpans.forEach(span => {
+        const text = span.textContent.trim();
+
+        // Match "X bd" pattern for bedrooms
+        if (/^\d+\s*bd$/i.test(text)) {
+          data.bedrooms = parseInt(text) || 0;
+        }
+        // Match "X ba" or "X.5 ba" pattern for bathrooms
+        else if (/^[\d.]+\s*ba$/i.test(text)) {
+          data.bathrooms = parseFloat(text) || 0;
+        }
+        // Match "X,XXX sqft" pattern for square footage
+        else if (/^[\d,]+\s*sqft$/i.test(text)) {
+          data.sqft = parseInt(text.replace(/[^0-9]/g, '')) || 0;
+        }
+      });
+
+      // 4. Try to get additional data from __NEXT_DATA__
       const nextDataEl = document.getElementById('__NEXT_DATA__');
       if (nextDataEl) {
         try {
           const nextData = JSON.parse(nextDataEl.textContent);
 
-          // Try multiple paths to find property data
-          let property = null;
+          // Try to find property in gdpClientCache
+          const gdpCache = nextData?.props?.pageProps?.gdpClientCache ||
+                          nextData?.props?.pageProps?.componentProps?.gdpClientCache;
 
-          // Path 1: Direct property object
-          if (nextData?.props?.pageProps?.property) {
-            property = nextData.props.pageProps.property;
-          }
-          // Path 2: initialReduxState gdp building
-          else if (nextData?.props?.pageProps?.initialReduxState?.gdp?.building) {
-            property = nextData.props.pageProps.initialReduxState.gdp.building;
-          }
-          // Path 3: componentProps
-          else if (nextData?.props?.pageProps?.componentProps?.gdpClientCache) {
-            const cache = nextData.props.pageProps.componentProps.gdpClientCache;
-            const cacheKey = Object.keys(cache).find(k => cache[k]?.property);
-            if (cacheKey) {
-              property = cache[cacheKey].property;
+          if (gdpCache) {
+            // Find the first cache entry with property data
+            for (const key of Object.keys(gdpCache)) {
+              const entry = gdpCache[key];
+              if (entry?.property) {
+                const prop = entry.property;
+
+                // Fill in missing data
+                if (!data.address && prop.address) {
+                  const addr = prop.address;
+                  data.address = `${addr.streetAddress}, ${addr.city}, ${addr.state} ${addr.zipcode}`;
+                }
+                if (!data.price) data.price = prop.price || 0;
+                if (!data.bedrooms) data.bedrooms = prop.bedrooms || 0;
+                if (!data.bathrooms) data.bathrooms = prop.bathrooms || 0;
+                if (!data.sqft) data.sqft = prop.livingArea || 0;
+                data.yearBuilt = prop.yearBuilt || 0;
+                data.zestimateRent = prop.rentZestimate || 0;
+                data.hoaFee = prop.monthlyHoaFee || 0;
+
+                if (prop.taxAnnualAmount) {
+                  data.propertyTax = prop.taxAnnualAmount / 12;
+                }
+
+                // Handle resoFacts for detailed bathroom info
+                if (prop.resoFacts) {
+                  if (!data.bedrooms) data.bedrooms = prop.resoFacts.bedrooms || 0;
+                  if (!data.sqft) data.sqft = prop.resoFacts.livingArea || 0;
+
+                  // Calculate bathrooms from full + half
+                  if (!data.bathrooms || data.bathrooms === 0) {
+                    const fullBaths = prop.resoFacts.bathroomsFull || 0;
+                    const halfBaths = prop.resoFacts.bathroomsHalf || 0;
+                    if (fullBaths || halfBaths) {
+                      data.bathrooms = fullBaths + (halfBaths * 0.5);
+                    }
+                  }
+                }
+
+                break; // Found property data, stop searching
+              }
             }
-          }
-          // Path 4: Try to find in gdpClientCache directly
-          else if (nextData?.props?.pageProps?.gdpClientCache) {
-            const cache = nextData.props.pageProps.gdpClientCache;
-            const cacheKey = Object.keys(cache).find(k => cache[k]?.property);
-            if (cacheKey) {
-              property = cache[cacheKey].property;
-            }
-          }
-
-          if (property) {
-            console.log('Rancho: Found property data in __NEXT_DATA__', property);
-
-            // Address
-            data.address = property.address?.streetAddress ||
-                          property.fullAddress ||
-                          (property.address ? `${property.address.streetAddress}, ${property.address.city}, ${property.address.state} ${property.address.zipcode}` : '');
-
-            // Price
-            data.price = property.price || property.listPrice || property.zestimate || 0;
-
-            // Bedrooms
-            data.bedrooms = property.bedrooms || property.resoFacts?.bedrooms || 0;
-
-            // Bathrooms - handle full and half baths
-            if (property.bathrooms !== undefined) {
-              data.bathrooms = property.bathrooms;
-            } else if (property.resoFacts) {
-              const fullBaths = property.resoFacts.bathroomsFull || 0;
-              const halfBaths = property.resoFacts.bathroomsHalf || 0;
-              const threeQuarterBaths = property.resoFacts.bathroomsThreeQuarter || 0;
-              data.bathrooms = fullBaths + (halfBaths * 0.5) + (threeQuarterBaths * 0.75);
-            }
-
-            // Square footage
-            data.sqft = property.livingArea ||
-                       property.livingAreaValue ||
-                       property.resoFacts?.livingArea ||
-                       property.lotSize ||
-                       0;
-
-            // Year built
-            data.yearBuilt = property.yearBuilt || property.resoFacts?.yearBuilt || 0;
-
-            // Rent estimate
-            data.zestimateRent = property.rentZestimate || 0;
-
-            // Property tax (annual to monthly)
-            if (property.taxAnnualAmount) {
-              data.propertyTax = property.taxAnnualAmount / 12;
-            } else if (property.resoFacts?.taxAnnualAmount) {
-              data.propertyTax = property.resoFacts.taxAnnualAmount / 12;
-            }
-
-            // HOA fee
-            data.hoaFee = property.monthlyHoaFee ||
-                         property.resoFacts?.hoaFee ||
-                         property.associationFee ||
-                         0;
           }
         } catch (e) {
-          console.log('Rancho: Failed to parse __NEXT_DATA__', e);
+          console.log('Rancho: Could not parse __NEXT_DATA__', e);
         }
       }
 
-      // Fallback: scrape from DOM if __NEXT_DATA__ didn't provide enough
-      if (!data.address) {
-        const addressEl = document.querySelector('[data-testid="bdp-address"]') ||
-                          document.querySelector('h1.Text-c11n-8-99-3__sc-aiai24-0');
-        if (addressEl) data.address = addressEl.textContent.trim();
-      }
-
-      if (!data.price) {
-        // Try multiple price selectors
-        const priceSelectors = [
-          '[data-testid="price"]',
-          'span[data-testid="price"]',
-          '.summary-container [data-testid="price"]',
-          '.ds-summary-row span.Text-c11n-8-99-3__sc-aiai24-0'
-        ];
-
-        for (const selector of priceSelectors) {
-          const priceEl = document.querySelector(selector);
-          if (priceEl) {
-            const priceText = priceEl.textContent.replace(/[^0-9]/g, '');
-            data.price = parseInt(priceText) || 0;
-            if (data.price > 0) break;
-          }
-        }
-      }
-
-      // Fallback for beds/baths/sqft from DOM
-      if (!data.bedrooms || !data.bathrooms || !data.sqft) {
-        // Try to find the summary facts section
-        const factSelectors = [
-          '[data-testid="bed-bath-sqft-fact-container"]',
-          '.summary-container',
-          '.ds-bed-bath-living-area-container',
-          '[data-testid="facts-container"]'
-        ];
-
-        for (const selector of factSelectors) {
-          const container = document.querySelector(selector);
-          if (container) {
-            const text = container.textContent;
-
-            // Extract bedrooms
-            if (!data.bedrooms) {
-              const bedMatch = text.match(/(\d+)\s*(?:bd|bed|bedroom)/i);
-              if (bedMatch) data.bedrooms = parseInt(bedMatch[1]);
-            }
-
-            // Extract bathrooms (handles decimals for half baths)
-            if (!data.bathrooms) {
-              const bathMatch = text.match(/([\d.]+)\s*(?:ba|bath|bathroom)/i);
-              if (bathMatch) data.bathrooms = parseFloat(bathMatch[1]);
-            }
-
-            // Extract sqft
-            if (!data.sqft) {
-              const sqftMatch = text.match(/([\d,]+)\s*(?:sqft|sq\s*ft|square\s*feet)/i);
-              if (sqftMatch) data.sqft = parseInt(sqftMatch[1].replace(/,/g, ''));
-            }
-          }
-        }
-
-        // Try individual fact items
-        const factItems = document.querySelectorAll('[data-testid="bed-bath-sqft-fact-container"] span, .ds-bed-bath-living-area span');
-        factItems.forEach(item => {
-          const text = item.textContent.toLowerCase();
-          if (text.includes('bd') || text.includes('bed')) {
-            if (!data.bedrooms) data.bedrooms = parseInt(text) || 0;
-          } else if (text.includes('ba') || text.includes('bath')) {
-            if (!data.bathrooms) data.bathrooms = parseBathrooms(text);
-          } else if (text.includes('sqft') || text.includes('sq ft')) {
-            if (!data.sqft) data.sqft = parseInt(text.replace(/[^0-9]/g, '')) || 0;
-          }
-        });
-      }
-
-      console.log('Rancho: Scraped property data', data);
+      console.log('Rancho: Scraped data', data);
 
     } catch (error) {
       console.error('Rancho: Error scraping data', error);
@@ -259,40 +153,36 @@
 
   // Analyze property
   function analyzeProperty() {
-    // Verify we're on a property detail page
     if (!isPropertyDetailPage()) {
-      showResultModal({ error: 'Please navigate to a property detail page to analyze.' });
+      showResultModal({ error: 'Please navigate to a property detail page.' });
       return;
     }
 
     const propertyData = scrapePropertyData();
 
-    // Validate we got some data
     if (!propertyData.price || propertyData.price === 0) {
-      showResultModal({ error: 'Could not find property price. Please make sure you are on a Zillow property detail page.' });
+      showResultModal({ error: 'Could not find property price. Please refresh and try again.' });
       return;
     }
 
-    // Send message to background script
     chrome.runtime.sendMessage({
       action: 'analyzeProperty',
       data: propertyData
     }, response => {
       if (chrome.runtime.lastError) {
-        showResultModal({ error: 'Extension error. Please refresh the page and try again.' });
+        showResultModal({ error: 'Extension error. Please refresh the page.' });
         return;
       }
       if (response && response.success) {
         showResultModal(response.result);
       } else {
-        showResultModal({ error: response?.error || 'Analysis failed. Please try again.' });
+        showResultModal({ error: response?.error || 'Analysis failed.' });
       }
     });
   }
 
   // Show result modal
   function showResultModal(result) {
-    // Remove existing modal
     const existingModal = document.getElementById('rancho-modal');
     if (existingModal) existingModal.remove();
 
@@ -303,7 +193,7 @@
       modal.innerHTML = `
         <div class="rancho-modal-content">
           <span class="rancho-close">&times;</span>
-          <h2>❌ Analysis Failed</h2>
+          <h2>❌ Error</h2>
           <p>${result.error}</p>
         </div>
       `;
@@ -318,7 +208,7 @@
             <h3>📍 Property Info</h3>
             <p><strong>Address:</strong> ${result.address || 'N/A'}</p>
             <p><strong>Price:</strong> $${result.price?.toLocaleString() || 'N/A'}</p>
-            <p><strong>Layout:</strong> ${result.bedrooms} bed ${result.bathrooms} bath ${result.sqft?.toLocaleString() || 0} sqft</p>
+            <p><strong>Layout:</strong> ${result.bedrooms || 0} bed ${result.bathrooms || 0} bath ${result.sqft?.toLocaleString() || 0} sqft</p>
           </div>
 
           <div class="rancho-section">
@@ -357,7 +247,7 @@
 
     document.body.appendChild(modal);
 
-    // Close button event
+    // Close button
     modal.querySelector('.rancho-close').addEventListener('click', () => modal.remove());
     modal.addEventListener('click', (e) => {
       if (e.target === modal) modal.remove();
@@ -372,20 +262,20 @@
           data: result
         }, response => {
           if (chrome.runtime.lastError) {
-            alert('Extension error. Please refresh the page and try again.');
+            alert('Extension error. Please refresh.');
             return;
           }
           if (response && response.success) {
             addBtn.textContent = '✅ Added!';
             addBtn.disabled = true;
           } else {
-            alert('Failed to add: ' + (response?.error || 'Unknown error'));
+            alert('Failed: ' + (response?.error || 'Unknown error'));
           }
         });
       });
     }
 
-    // Copy results button
+    // Copy button
     const copyBtn = modal.querySelector('#rancho-copy');
     if (copyBtn) {
       copyBtn.addEventListener('click', () => {
@@ -415,12 +305,10 @@
     const url = location.href;
     if (url !== lastUrl) {
       lastUrl = url;
-      // Delay to let page load
       setTimeout(() => {
         if (isPropertyDetailPage()) {
           createRanchoButton();
         } else {
-          // Remove button if not on detail page
           const existingBtn = document.getElementById('rancho-btn');
           if (existingBtn) existingBtn.remove();
         }
