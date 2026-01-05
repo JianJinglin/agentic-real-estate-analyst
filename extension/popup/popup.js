@@ -28,6 +28,24 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('reset-assumptions').addEventListener('click', resetAssumptions);
 });
 
+// Default assumptions - must match background.js
+function getDefaultAssumptions() {
+  return {
+    downPaymentPercent: 3.5,       // Down payment 3.5%
+    interestRate: 6.0,             // Interest rate 6%
+    loanTermYears: 30,             // Loan term 30 years
+    propertyTaxRate: 2.5,          // Property tax rate 2.5%/year
+    insuranceRate: 0.3,            // Insurance rate 0.3%/year (price * 0.003)
+    maintenancePercent: 5,         // Maintenance 5% of monthly rent
+    vacancyRate: 0,                // Vacancy rate 0%
+    propertyManagementPercent: 10, // Property management 10% of rent
+    incomeTaxRate: 10,             // Income tax rate 10%
+    highIncomeTaxRate: 30,         // High income tax rate 30%
+    mortgageInsuranceRate: 0.75,   // PMI rate 0.75%/year
+    appreciationRate: 3            // Annual property appreciation 3%
+  };
+}
+
 // Load settings
 function loadSettings() {
   chrome.storage.sync.get(['githubToken', 'githubRepo', 'githubPath', 'assumptions'], (result) => {
@@ -41,29 +59,27 @@ function loadSettings() {
       document.getElementById('github-path').value = result.githubPath;
     }
 
-    const assumptions = result.assumptions || getDefaultAssumptions();
+    const defaults = getDefaultAssumptions();
+    const assumptions = { ...defaults, ...(result.assumptions || {}) };
+
+    // Loan parameters
     document.getElementById('down-payment').value = assumptions.downPaymentPercent;
     document.getElementById('interest-rate').value = assumptions.interestRate;
     document.getElementById('loan-term').value = assumptions.loanTermYears;
+    document.getElementById('pmi-rate').value = assumptions.mortgageInsuranceRate;
+
+    // Expense parameters
     document.getElementById('property-tax').value = assumptions.propertyTaxRate;
     document.getElementById('insurance-rate').value = assumptions.insuranceRate;
-    document.getElementById('maintenance-rate').value = assumptions.maintenanceRate;
+    document.getElementById('maintenance-percent').value = assumptions.maintenancePercent;
+    document.getElementById('management-percent').value = assumptions.propertyManagementPercent;
     document.getElementById('vacancy-rate').value = assumptions.vacancyRate;
-  });
-}
 
-// Default assumptions
-function getDefaultAssumptions() {
-  return {
-    downPaymentPercent: 20,
-    interestRate: 7.0,
-    loanTermYears: 30,
-    propertyTaxRate: 1.25,
-    insuranceRate: 0.5,
-    maintenanceRate: 1,
-    vacancyRate: 5,
-    propertyManagementRate: 0
-  };
+    // Tax & returns
+    document.getElementById('income-tax-rate').value = assumptions.incomeTaxRate;
+    document.getElementById('high-income-tax-rate').value = assumptions.highIncomeTaxRate;
+    document.getElementById('appreciation-rate').value = assumptions.appreciationRate;
+  });
 }
 
 // Save GitHub config
@@ -88,15 +104,26 @@ function saveGitHubConfig() {
 
 // Save assumptions
 function saveAssumptions() {
+  const defaults = getDefaultAssumptions();
+
   const assumptions = {
-    downPaymentPercent: parseFloat(document.getElementById('down-payment').value) || 20,
-    interestRate: parseFloat(document.getElementById('interest-rate').value) || 7.0,
-    loanTermYears: parseInt(document.getElementById('loan-term').value) || 30,
-    propertyTaxRate: parseFloat(document.getElementById('property-tax').value) || 1.25,
-    insuranceRate: parseFloat(document.getElementById('insurance-rate').value) || 0.5,
-    maintenanceRate: parseFloat(document.getElementById('maintenance-rate').value) || 1,
-    vacancyRate: parseFloat(document.getElementById('vacancy-rate').value) || 5,
-    propertyManagementRate: 0
+    // Loan parameters
+    downPaymentPercent: parseFloat(document.getElementById('down-payment').value) || defaults.downPaymentPercent,
+    interestRate: parseFloat(document.getElementById('interest-rate').value) || defaults.interestRate,
+    loanTermYears: parseInt(document.getElementById('loan-term').value) || defaults.loanTermYears,
+    mortgageInsuranceRate: parseFloat(document.getElementById('pmi-rate').value) || defaults.mortgageInsuranceRate,
+
+    // Expense parameters
+    propertyTaxRate: parseFloat(document.getElementById('property-tax').value) || defaults.propertyTaxRate,
+    insuranceRate: parseFloat(document.getElementById('insurance-rate').value) || defaults.insuranceRate,
+    maintenancePercent: parseFloat(document.getElementById('maintenance-percent').value) || defaults.maintenancePercent,
+    propertyManagementPercent: parseFloat(document.getElementById('management-percent').value) || defaults.propertyManagementPercent,
+    vacancyRate: parseFloat(document.getElementById('vacancy-rate').value) || 0, // Allow 0
+
+    // Tax & returns
+    incomeTaxRate: parseFloat(document.getElementById('income-tax-rate').value) || defaults.incomeTaxRate,
+    highIncomeTaxRate: parseFloat(document.getElementById('high-income-tax-rate').value) || defaults.highIncomeTaxRate,
+    appreciationRate: parseFloat(document.getElementById('appreciation-rate').value) || defaults.appreciationRate
   };
 
   chrome.storage.sync.set({ assumptions }, () => {
@@ -108,13 +135,23 @@ function saveAssumptions() {
 function resetAssumptions() {
   const defaults = getDefaultAssumptions();
 
+  // Loan parameters
   document.getElementById('down-payment').value = defaults.downPaymentPercent;
   document.getElementById('interest-rate').value = defaults.interestRate;
   document.getElementById('loan-term').value = defaults.loanTermYears;
+  document.getElementById('pmi-rate').value = defaults.mortgageInsuranceRate;
+
+  // Expense parameters
   document.getElementById('property-tax').value = defaults.propertyTaxRate;
   document.getElementById('insurance-rate').value = defaults.insuranceRate;
-  document.getElementById('maintenance-rate').value = defaults.maintenanceRate;
+  document.getElementById('maintenance-percent').value = defaults.maintenancePercent;
+  document.getElementById('management-percent').value = defaults.propertyManagementPercent;
   document.getElementById('vacancy-rate').value = defaults.vacancyRate;
+
+  // Tax & returns
+  document.getElementById('income-tax-rate').value = defaults.incomeTaxRate;
+  document.getElementById('high-income-tax-rate').value = defaults.highIncomeTaxRate;
+  document.getElementById('appreciation-rate').value = defaults.appreciationRate;
 
   chrome.storage.sync.set({ assumptions: defaults }, () => {
     showStatus('assumptions-status', 'success', '✅ Reset to defaults');

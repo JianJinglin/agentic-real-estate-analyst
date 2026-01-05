@@ -47,15 +47,22 @@
         <h3>💰 Loan Parameters</h3>
         <div class="form-group">
           <label>Down Payment (%)</label>
-          <input type="number" id="down-payment" value="20" min="0" max="100">
+          <input type="number" id="down-payment" value="3.5" step="0.5" min="0" max="100">
+          <small>Default: 3.5% for FHA loan</small>
         </div>
         <div class="form-group">
           <label>Interest Rate (%)</label>
-          <input type="number" id="interest-rate" value="7.0" step="0.1" min="0">
+          <input type="number" id="interest-rate" value="6.0" step="0.125" min="0">
+          <small>Annual mortgage interest rate</small>
         </div>
         <div class="form-group">
           <label>Loan Term (years)</label>
           <input type="number" id="loan-term" value="30" min="1" max="40">
+        </div>
+        <div class="form-group">
+          <label>PMI Rate (% of loan/year)</label>
+          <input type="number" id="pmi-rate" value="0.75" step="0.05" min="0">
+          <small>Only applied when LTV > 80%. Formula: loan × 0.75% / 12</small>
         </div>
       </div>
 
@@ -63,19 +70,47 @@
         <h3>🏦 Expense Parameters</h3>
         <div class="form-group">
           <label>Property Tax Rate (%/year)</label>
-          <input type="number" id="property-tax" value="1.25" step="0.01" min="0">
+          <input type="number" id="property-tax" value="2.5" step="0.1" min="0">
+          <small>Annual property tax as % of home value</small>
         </div>
         <div class="form-group">
           <label>Insurance Rate (%/year)</label>
-          <input type="number" id="insurance-rate" value="0.5" step="0.01" min="0">
+          <input type="number" id="insurance-rate" value="0.3" step="0.05" min="0">
+          <small>Default: 0.3% = home value × 0.003 / 12 per month</small>
         </div>
         <div class="form-group">
-          <label>Maintenance Rate (%/year)</label>
-          <input type="number" id="maintenance-rate" value="1" step="0.1" min="0">
+          <label>Maintenance (% of monthly rent)</label>
+          <input type="number" id="maintenance-percent" value="5" step="1" min="0">
+          <small>Monthly maintenance reserve as % of rent</small>
         </div>
         <div class="form-group">
-          <label>Vacancy Rate (%)</label>
-          <input type="number" id="vacancy-rate" value="5" step="1" min="0" max="100">
+          <label>Property Management (% of monthly rent)</label>
+          <input type="number" id="management-percent" value="10" step="1" min="0">
+          <small>Property manager fee as % of rent</small>
+        </div>
+        <div class="form-group">
+          <label>Vacancy Rate (% of rent)</label>
+          <input type="number" id="vacancy-rate" value="0" step="1" min="0" max="100">
+          <small>Expected vacancy loss. 0% = assume always rented, 5% = ~18 days/year vacant</small>
+        </div>
+      </div>
+
+      <div class="section">
+        <h3>📈 Tax & Returns</h3>
+        <div class="form-group">
+          <label>Income Tax Rate (%)</label>
+          <input type="number" id="income-tax-rate" value="10" step="1" min="0" max="50">
+          <small>Low tax bracket for cashflow calculation</small>
+        </div>
+        <div class="form-group">
+          <label>High Income Tax Rate (%)</label>
+          <input type="number" id="high-income-tax-rate" value="30" step="1" min="0" max="50">
+          <small>High tax bracket for comparison</small>
+        </div>
+        <div class="form-group">
+          <label>Annual Appreciation Rate (%)</label>
+          <input type="number" id="appreciation-rate" value="3" step="0.5" min="0" max="20">
+          <small>Expected annual home value increase</small>
         </div>
       </div>
 
@@ -108,14 +143,17 @@
 
       <div class="section">
         <h3>📊 Calculation Formulas</h3>
-        <p><strong>Monthly Cashflow</strong> = Rent - Mortgage - Tax - Insurance - HOA - Maintenance - Vacancy</p>
-        <p><strong>CoC Return</strong> = Annual Cashflow / Total Cash Invested × 100%</p>
+        <p><strong>PMI</strong> = IF(LTV > 80%, loan × 0.75% / 12, 0)</p>
+        <p><strong>Monthly Expenses</strong> = Mortgage + Tax + Insurance + Maint + Mgmt + HOA + PMI</p>
+        <p><strong>Cashflow</strong> = Rent - Expenses - Income Tax</p>
+        <p><strong>Cashflow APY</strong> = Annual Cashflow / Down Payment × 100%</p>
+        <p><strong>5-Year APY</strong> = (Cashflow + Appreciation) / Down Payment × 100%</p>
         <p><strong>Cap Rate</strong> = Annual NOI / Price × 100%</p>
       </div>
     </div>
 
     <footer>
-      <p>v1.0.0 | Made with ❤️</p>
+      <p>v1.1.0 | Made with ❤️</p>
     </footer>
   </div>
 
