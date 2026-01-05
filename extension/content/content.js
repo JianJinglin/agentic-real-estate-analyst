@@ -52,7 +52,7 @@
     };
 
     try {
-      // 1. Get Address from DOM (most visible element)
+      // 1. Get Address from DOM (h1 element)
       const addressEl = document.querySelector('h1');
       if (addressEl) {
         data.address = addressEl.textContent.trim();
@@ -65,80 +65,133 @@
         data.price = parseInt(priceText) || 0;
       }
 
-      // 3. Get beds/baths/sqft - look for the summary container
-      const allSpans = document.querySelectorAll('span');
-      allSpans.forEach(span => {
-        const text = span.textContent.trim();
+      // 3. Get beds/baths/sqft - try multiple approaches
 
-        // Match "X bd" pattern for bedrooms
-        if (/^\d+\s*bd$/i.test(text)) {
-          data.bedrooms = parseInt(text) || 0;
+      // Approach A: Look for data-testid attributes (most reliable)
+      const bedsEl = document.querySelector('[data-testid="bed-bath-item"]:first-of-type strong, [data-testid="beds"] strong');
+      const bathsEl = document.querySelector('[data-testid="bed-bath-item"]:nth-of-type(2) strong, [data-testid="baths"] strong');
+      const sqftEl = document.querySelector('[data-testid="bed-bath-item"]:nth-of-type(3) strong, [data-testid="sqft"] strong');
+
+      if (bedsEl) data.bedrooms = parseInt(bedsEl.textContent) || 0;
+      if (bathsEl) data.bathrooms = parseFloat(bathsEl.textContent) || 0;
+      if (sqftEl) data.sqft = parseInt(sqftEl.textContent.replace(/,/g, '')) || 0;
+
+      // Approach B: Search entire page text for patterns
+      if (!data.bedrooms || !data.bathrooms || !data.sqft) {
+        const pageText = document.body.innerText;
+
+        // Match patterns like "4 beds", "2 baths", "1,194 sqft"
+        if (!data.bedrooms) {
+          const bedsMatch = pageText.match(/(\d+)\s*beds?\b/i);
+          if (bedsMatch) data.bedrooms = parseInt(bedsMatch[1]);
         }
-        // Match "X ba" or "X.5 ba" pattern for bathrooms
-        else if (/^[\d.]+\s*ba$/i.test(text)) {
-          data.bathrooms = parseFloat(text) || 0;
+
+        if (!data.bathrooms) {
+          const bathsMatch = pageText.match(/([\d.]+)\s*baths?\b/i);
+          if (bathsMatch) data.bathrooms = parseFloat(bathsMatch[1]);
         }
-        // Match "X,XXX sqft" pattern for square footage
-        else if (/^[\d,]+\s*sqft$/i.test(text)) {
-          data.sqft = parseInt(text.replace(/[^0-9]/g, '')) || 0;
+
+        if (!data.sqft) {
+          const sqftMatch = pageText.match(/([\d,]+)\s*sq\s*ft\b/i);
+          if (sqftMatch) data.sqft = parseInt(sqftMatch[1].replace(/,/g, ''));
         }
-      });
+      }
 
-      // 4. Try to get additional data from __NEXT_DATA__
-      const nextDataEl = document.getElementById('__NEXT_DATA__');
-      if (nextDataEl) {
-        try {
-          const nextData = JSON.parse(nextDataEl.textContent);
+      // Approach C: Find labeled elements by traversing DOM
+      if (!data.bedrooms || !data.bathrooms || !data.sqft) {
+        const allSpans = document.querySelectorAll('span');
 
-          // Try to find property in gdpClientCache
-          const gdpCache = nextData?.props?.pageProps?.gdpClientCache ||
-                          nextData?.props?.pageProps?.componentProps?.gdpClientCache;
+        allSpans.forEach(span => {
+          const text = span.textContent.trim().toLowerCase();
+          const parent = span.parentElement;
+          if (!parent) return;
 
-          if (gdpCache) {
-            // Find the first cache entry with property data
-            for (const key of Object.keys(gdpCache)) {
-              const entry = gdpCache[key];
-              if (entry?.property) {
-                const prop = entry.property;
+          // Look for label elements and get number from sibling
+          if ((text === 'beds' || text === 'bed') && !data.bedrooms) {
+            // Check previous sibling element for the number
+            const prevSibling = span.previousElementSibling;
+            if (prevSibling) {
+              const num = parseInt(prevSibling.textContent);
+              if (!isNaN(num) && num > 0 && num < 20) data.bedrooms = num;
+            }
+            // Also try parent's first child if different from current span
+            const firstChild = parent.firstElementChild;
+            if (firstChild && firstChild !== span && !data.bedrooms) {
+              const num = parseInt(firstChild.textContent);
+              if (!isNaN(num) && num > 0 && num < 20) data.bedrooms = num;
+            }
+          }
 
-                // Fill in missing data
-                if (!data.address && prop.address) {
-                  const addr = prop.address;
-                  data.address = `${addr.streetAddress}, ${addr.city}, ${addr.state} ${addr.zipcode}`;
-                }
-                if (!data.price) data.price = prop.price || 0;
-                if (!data.bedrooms) data.bedrooms = prop.bedrooms || 0;
-                if (!data.bathrooms) data.bathrooms = prop.bathrooms || 0;
-                if (!data.sqft) data.sqft = prop.livingArea || 0;
-                data.yearBuilt = prop.yearBuilt || 0;
-                data.zestimateRent = prop.rentZestimate || 0;
-                data.hoaFee = prop.monthlyHoaFee || 0;
+          if ((text === 'baths' || text === 'bath') && !data.bathrooms) {
+            const prevSibling = span.previousElementSibling;
+            if (prevSibling) {
+              const num = parseFloat(prevSibling.textContent);
+              if (!isNaN(num) && num > 0 && num < 20) data.bathrooms = num;
+            }
+            const firstChild = parent.firstElementChild;
+            if (firstChild && firstChild !== span && !data.bathrooms) {
+              const num = parseFloat(firstChild.textContent);
+              if (!isNaN(num) && num > 0 && num < 20) data.bathrooms = num;
+            }
+          }
 
-                if (prop.taxAnnualAmount) {
-                  data.propertyTax = prop.taxAnnualAmount / 12;
-                }
+          if ((text === 'sqft' || text === 'sq ft' || text === 'square feet') && !data.sqft) {
+            const prevSibling = span.previousElementSibling;
+            if (prevSibling) {
+              const num = parseInt(prevSibling.textContent.replace(/,/g, ''));
+              if (!isNaN(num) && num > 100) data.sqft = num;
+            }
+            const firstChild = parent.firstElementChild;
+            if (firstChild && firstChild !== span && !data.sqft) {
+              const num = parseInt(firstChild.textContent.replace(/,/g, ''));
+              if (!isNaN(num) && num > 100) data.sqft = num;
+            }
+          }
+        });
+      }
 
-                // Handle resoFacts for detailed bathroom info
-                if (prop.resoFacts) {
-                  if (!data.bedrooms) data.bedrooms = prop.resoFacts.bedrooms || 0;
-                  if (!data.sqft) data.sqft = prop.resoFacts.livingArea || 0;
+      // 4. Fallback: Try to get data from __NEXT_DATA__
+      if (!data.bedrooms || !data.bathrooms || !data.sqft) {
+        const nextDataEl = document.getElementById('__NEXT_DATA__');
+        if (nextDataEl) {
+          try {
+            const nextData = JSON.parse(nextDataEl.textContent);
+            const gdpCache = nextData?.props?.pageProps?.gdpClientCache ||
+                            nextData?.props?.pageProps?.componentProps?.gdpClientCache;
 
-                  // Calculate bathrooms from full + half
-                  if (!data.bathrooms || data.bathrooms === 0) {
+            if (gdpCache) {
+              for (const key of Object.keys(gdpCache)) {
+                const entry = gdpCache[key];
+                if (entry?.property) {
+                  const prop = entry.property;
+
+                  if (!data.bedrooms) data.bedrooms = prop.bedrooms || 0;
+                  if (!data.bathrooms) data.bathrooms = prop.bathrooms || 0;
+                  if (!data.sqft) data.sqft = prop.livingArea || 0;
+                  data.yearBuilt = prop.yearBuilt || 0;
+                  data.zestimateRent = prop.rentZestimate || 0;
+                  data.hoaFee = prop.monthlyHoaFee || 0;
+
+                  if (prop.taxAnnualAmount) {
+                    data.propertyTax = prop.taxAnnualAmount / 12;
+                  }
+
+                  // Handle resoFacts for bathrooms (full + half)
+                  if (prop.resoFacts && (!data.bathrooms || data.bathrooms === 0)) {
                     const fullBaths = prop.resoFacts.bathroomsFull || 0;
                     const halfBaths = prop.resoFacts.bathroomsHalf || 0;
                     if (fullBaths || halfBaths) {
                       data.bathrooms = fullBaths + (halfBaths * 0.5);
                     }
                   }
-                }
 
-                break; // Found property data, stop searching
+                  break;
+                }
               }
             }
+          } catch (e) {
+            console.log('Rancho: Could not parse __NEXT_DATA__', e);
           }
-        } catch (e) {
-          console.log('Rancho: Could not parse __NEXT_DATA__', e);
         }
       }
 
