@@ -39,6 +39,33 @@
     });
   }
 
+  // Parse bathroom count - handles full and half baths
+  function parseBathrooms(text) {
+    if (!text) return 0;
+
+    const lowerText = text.toLowerCase();
+
+    // Handle "X full, Y half" format
+    const fullHalfMatch = lowerText.match(/(\d+)\s*full.*?(\d+)\s*half/i);
+    if (fullHalfMatch) {
+      return parseInt(fullHalfMatch[1]) + (parseInt(fullHalfMatch[2]) * 0.5);
+    }
+
+    // Handle "X.5 ba" or "X ba" format
+    const baMatch = lowerText.match(/([\d.]+)\s*ba/);
+    if (baMatch) {
+      return parseFloat(baMatch[1]);
+    }
+
+    // Handle just a number with decimal
+    const numMatch = text.match(/([\d.]+)/);
+    if (numMatch) {
+      return parseFloat(numMatch[1]);
+    }
+
+    return 0;
+  }
+
   // Scrape property data from page
   function scrapePropertyData() {
     const data = {
@@ -57,62 +84,171 @@
     };
 
     try {
-      // Address
-      const addressEl = document.querySelector('[data-testid="bdp-address"]') ||
-                        document.querySelector('h1');
-      if (addressEl) data.address = addressEl.textContent.trim();
-
-      // Price
-      const priceEl = document.querySelector('[data-testid="price"]') ||
-                      document.querySelector('span[data-testid="price"]');
-      if (priceEl) {
-        const priceText = priceEl.textContent.replace(/[^0-9]/g, '');
-        data.price = parseInt(priceText) || 0;
-      }
-
-      // Beds, baths, sqft
-      const summaryItems = document.querySelectorAll('[data-testid="bed-bath-sqft-fact-container"] span');
-      summaryItems.forEach(item => {
-        const text = item.textContent.toLowerCase();
-        if (text.includes('bd')) {
-          data.bedrooms = parseInt(text) || 0;
-        } else if (text.includes('ba')) {
-          data.bathrooms = parseFloat(text) || 0;
-        } else if (text.includes('sqft')) {
-          data.sqft = parseInt(text.replace(/[^0-9]/g, '')) || 0;
-        }
-      });
-
-      // Alternative way to get beds/baths/sqft
-      if (!data.bedrooms) {
-        const bedsEl = document.querySelector('[data-testid="bed-bath-item"]');
-        if (bedsEl) {
-          const match = bedsEl.textContent.match(/(\d+)\s*bd/i);
-          if (match) data.bedrooms = parseInt(match[1]);
-        }
-      }
-
-      // Try to get data from Next.js __NEXT_DATA__
+      // Try to get data from Next.js __NEXT_DATA__ first (most reliable)
       const nextDataEl = document.getElementById('__NEXT_DATA__');
       if (nextDataEl) {
         try {
           const nextData = JSON.parse(nextDataEl.textContent);
-          const property = nextData?.props?.pageProps?.property ||
-                          nextData?.props?.pageProps?.initialReduxState?.gdp?.building;
+
+          // Try multiple paths to find property data
+          let property = null;
+
+          // Path 1: Direct property object
+          if (nextData?.props?.pageProps?.property) {
+            property = nextData.props.pageProps.property;
+          }
+          // Path 2: initialReduxState gdp building
+          else if (nextData?.props?.pageProps?.initialReduxState?.gdp?.building) {
+            property = nextData.props.pageProps.initialReduxState.gdp.building;
+          }
+          // Path 3: componentProps
+          else if (nextData?.props?.pageProps?.componentProps?.gdpClientCache) {
+            const cache = nextData.props.pageProps.componentProps.gdpClientCache;
+            const cacheKey = Object.keys(cache).find(k => cache[k]?.property);
+            if (cacheKey) {
+              property = cache[cacheKey].property;
+            }
+          }
+          // Path 4: Try to find in gdpClientCache directly
+          else if (nextData?.props?.pageProps?.gdpClientCache) {
+            const cache = nextData.props.pageProps.gdpClientCache;
+            const cacheKey = Object.keys(cache).find(k => cache[k]?.property);
+            if (cacheKey) {
+              property = cache[cacheKey].property;
+            }
+          }
+
           if (property) {
-            data.price = property.price || data.price;
-            data.bedrooms = property.bedrooms || data.bedrooms;
-            data.bathrooms = property.bathrooms || data.bathrooms;
-            data.sqft = property.livingArea || property.livingAreaValue || data.sqft;
-            data.yearBuilt = property.yearBuilt || data.yearBuilt;
-            data.zestimateRent = property.rentZestimate || data.zestimateRent;
-            data.propertyTax = property.taxAnnualAmount ? property.taxAnnualAmount / 12 : data.propertyTax;
-            data.hoaFee = property.monthlyHoaFee || data.hoaFee;
+            console.log('Rancho: Found property data in __NEXT_DATA__', property);
+
+            // Address
+            data.address = property.address?.streetAddress ||
+                          property.fullAddress ||
+                          (property.address ? `${property.address.streetAddress}, ${property.address.city}, ${property.address.state} ${property.address.zipcode}` : '');
+
+            // Price
+            data.price = property.price || property.listPrice || property.zestimate || 0;
+
+            // Bedrooms
+            data.bedrooms = property.bedrooms || property.resoFacts?.bedrooms || 0;
+
+            // Bathrooms - handle full and half baths
+            if (property.bathrooms !== undefined) {
+              data.bathrooms = property.bathrooms;
+            } else if (property.resoFacts) {
+              const fullBaths = property.resoFacts.bathroomsFull || 0;
+              const halfBaths = property.resoFacts.bathroomsHalf || 0;
+              const threeQuarterBaths = property.resoFacts.bathroomsThreeQuarter || 0;
+              data.bathrooms = fullBaths + (halfBaths * 0.5) + (threeQuarterBaths * 0.75);
+            }
+
+            // Square footage
+            data.sqft = property.livingArea ||
+                       property.livingAreaValue ||
+                       property.resoFacts?.livingArea ||
+                       property.lotSize ||
+                       0;
+
+            // Year built
+            data.yearBuilt = property.yearBuilt || property.resoFacts?.yearBuilt || 0;
+
+            // Rent estimate
+            data.zestimateRent = property.rentZestimate || 0;
+
+            // Property tax (annual to monthly)
+            if (property.taxAnnualAmount) {
+              data.propertyTax = property.taxAnnualAmount / 12;
+            } else if (property.resoFacts?.taxAnnualAmount) {
+              data.propertyTax = property.resoFacts.taxAnnualAmount / 12;
+            }
+
+            // HOA fee
+            data.hoaFee = property.monthlyHoaFee ||
+                         property.resoFacts?.hoaFee ||
+                         property.associationFee ||
+                         0;
           }
         } catch (e) {
-          console.log('Rancho: Failed to parse __NEXT_DATA__');
+          console.log('Rancho: Failed to parse __NEXT_DATA__', e);
         }
       }
+
+      // Fallback: scrape from DOM if __NEXT_DATA__ didn't provide enough
+      if (!data.address) {
+        const addressEl = document.querySelector('[data-testid="bdp-address"]') ||
+                          document.querySelector('h1.Text-c11n-8-99-3__sc-aiai24-0');
+        if (addressEl) data.address = addressEl.textContent.trim();
+      }
+
+      if (!data.price) {
+        // Try multiple price selectors
+        const priceSelectors = [
+          '[data-testid="price"]',
+          'span[data-testid="price"]',
+          '.summary-container [data-testid="price"]',
+          '.ds-summary-row span.Text-c11n-8-99-3__sc-aiai24-0'
+        ];
+
+        for (const selector of priceSelectors) {
+          const priceEl = document.querySelector(selector);
+          if (priceEl) {
+            const priceText = priceEl.textContent.replace(/[^0-9]/g, '');
+            data.price = parseInt(priceText) || 0;
+            if (data.price > 0) break;
+          }
+        }
+      }
+
+      // Fallback for beds/baths/sqft from DOM
+      if (!data.bedrooms || !data.bathrooms || !data.sqft) {
+        // Try to find the summary facts section
+        const factSelectors = [
+          '[data-testid="bed-bath-sqft-fact-container"]',
+          '.summary-container',
+          '.ds-bed-bath-living-area-container',
+          '[data-testid="facts-container"]'
+        ];
+
+        for (const selector of factSelectors) {
+          const container = document.querySelector(selector);
+          if (container) {
+            const text = container.textContent;
+
+            // Extract bedrooms
+            if (!data.bedrooms) {
+              const bedMatch = text.match(/(\d+)\s*(?:bd|bed|bedroom)/i);
+              if (bedMatch) data.bedrooms = parseInt(bedMatch[1]);
+            }
+
+            // Extract bathrooms (handles decimals for half baths)
+            if (!data.bathrooms) {
+              const bathMatch = text.match(/([\d.]+)\s*(?:ba|bath|bathroom)/i);
+              if (bathMatch) data.bathrooms = parseFloat(bathMatch[1]);
+            }
+
+            // Extract sqft
+            if (!data.sqft) {
+              const sqftMatch = text.match(/([\d,]+)\s*(?:sqft|sq\s*ft|square\s*feet)/i);
+              if (sqftMatch) data.sqft = parseInt(sqftMatch[1].replace(/,/g, ''));
+            }
+          }
+        }
+
+        // Try individual fact items
+        const factItems = document.querySelectorAll('[data-testid="bed-bath-sqft-fact-container"] span, .ds-bed-bath-living-area span');
+        factItems.forEach(item => {
+          const text = item.textContent.toLowerCase();
+          if (text.includes('bd') || text.includes('bed')) {
+            if (!data.bedrooms) data.bedrooms = parseInt(text) || 0;
+          } else if (text.includes('ba') || text.includes('bath')) {
+            if (!data.bathrooms) data.bathrooms = parseBathrooms(text);
+          } else if (text.includes('sqft') || text.includes('sq ft')) {
+            if (!data.sqft) data.sqft = parseInt(text.replace(/[^0-9]/g, '')) || 0;
+          }
+        });
+      }
+
+      console.log('Rancho: Scraped property data', data);
 
     } catch (error) {
       console.error('Rancho: Error scraping data', error);
@@ -182,7 +318,7 @@
             <h3>📍 Property Info</h3>
             <p><strong>Address:</strong> ${result.address || 'N/A'}</p>
             <p><strong>Price:</strong> $${result.price?.toLocaleString() || 'N/A'}</p>
-            <p><strong>Layout:</strong> ${result.bedrooms} bed ${result.bathrooms} bath ${result.sqft?.toLocaleString()} sqft</p>
+            <p><strong>Layout:</strong> ${result.bedrooms} bed ${result.bathrooms} bath ${result.sqft?.toLocaleString() || 0} sqft</p>
           </div>
 
           <div class="rancho-section">
