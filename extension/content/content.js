@@ -4,28 +4,27 @@
   'use strict';
 
   // 检查是否已经注入过
-  if (document.getElementById('xiao-r-btn')) return;
+  if (document.getElementById('rancho-btn')) return;
 
-  // 创建"小R"按钮
-  function createXiaoRButton() {
+  // 创建 Rancho 按钮 - 始终固定在右下角
+  function createRanchoButton() {
+    // 移除已存在的按钮
+    const existingBtn = document.getElementById('rancho-btn');
+    if (existingBtn) existingBtn.remove();
+
     const btn = document.createElement('button');
-    btn.id = 'xiao-r-btn';
-    btn.innerHTML = '🏠 小R';
+    btn.id = 'rancho-btn';
+    btn.innerHTML = '🏠 Rancho';
     btn.title = '分析此房产现金流';
 
-    // 查找合适的位置插入按钮（价格区域附近）
-    const priceElement = document.querySelector('[data-testid="price"]') ||
-                         document.querySelector('.summary-container');
+    // 直接添加到 body，固定定位在右下角
+    document.body.appendChild(btn);
 
-    if (priceElement) {
-      priceElement.parentElement.insertBefore(btn, priceElement.nextSibling);
-    } else {
-      // 备选：固定在页面右下角
-      btn.classList.add('xiao-r-fixed');
-      document.body.appendChild(btn);
-    }
-
-    btn.addEventListener('click', analyzeProperty);
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      analyzeProperty();
+    });
   }
 
   // 从页面抓取房产数据
@@ -129,7 +128,7 @@
       }
 
     } catch (error) {
-      console.error('小R: 数据抓取错误', error);
+      console.error('Rancho: 数据抓取错误', error);
     }
 
     return data;
@@ -155,16 +154,16 @@
   // 显示结果弹窗
   function showResultModal(result) {
     // 移除已存在的弹窗
-    const existingModal = document.getElementById('xiao-r-modal');
+    const existingModal = document.getElementById('rancho-modal');
     if (existingModal) existingModal.remove();
 
     const modal = document.createElement('div');
-    modal.id = 'xiao-r-modal';
+    modal.id = 'rancho-modal';
 
     if (result.error) {
       modal.innerHTML = `
-        <div class="xiao-r-modal-content">
-          <span class="xiao-r-close">&times;</span>
+        <div class="rancho-modal-content">
+          <span class="rancho-close">&times;</span>
           <h2>❌ 分析失败</h2>
           <p>${result.error}</p>
         </div>
@@ -172,18 +171,18 @@
     } else {
       const cashflowClass = result.monthlyCashflow >= 0 ? 'positive' : 'negative';
       modal.innerHTML = `
-        <div class="xiao-r-modal-content">
-          <span class="xiao-r-close">&times;</span>
-          <h2>🏠 小R 现金流分析</h2>
+        <div class="rancho-modal-content">
+          <span class="rancho-close">&times;</span>
+          <h2>🏠 Rancho 现金流分析</h2>
 
-          <div class="xiao-r-section">
+          <div class="rancho-section">
             <h3>📍 房产信息</h3>
             <p><strong>地址:</strong> ${result.address || 'N/A'}</p>
             <p><strong>价格:</strong> $${result.price?.toLocaleString() || 'N/A'}</p>
             <p><strong>户型:</strong> ${result.bedrooms}床 ${result.bathrooms}卫 ${result.sqft?.toLocaleString()}sqft</p>
           </div>
 
-          <div class="xiao-r-section">
+          <div class="rancho-section">
             <h3>💰 月度收支</h3>
             <p><strong>预估月租金:</strong> $${result.monthlyRent?.toLocaleString() || 'N/A'}</p>
             <p><strong>月供 (P&I):</strong> -$${result.monthlyMortgage?.toLocaleString() || 'N/A'}</p>
@@ -194,7 +193,7 @@
             <p><strong>空置预留:</strong> -$${result.monthlyVacancy?.toLocaleString() || 'N/A'}</p>
           </div>
 
-          <div class="xiao-r-section xiao-r-result">
+          <div class="rancho-section rancho-result">
             <h3>📊 现金流结果</h3>
             <p class="cashflow ${cashflowClass}">
               <strong>月现金流:</strong> $${result.monthlyCashflow?.toLocaleString() || 'N/A'}
@@ -204,14 +203,14 @@
             <p><strong>Cap Rate:</strong> ${result.capRate?.toFixed(2) || 'N/A'}%</p>
           </div>
 
-          <div class="xiao-r-section">
+          <div class="rancho-section">
             <h3>⚙️ 假设参数</h3>
             <p>首付: ${result.assumptions?.downPaymentPercent}% | 利率: ${result.assumptions?.interestRate}% | 贷款期限: ${result.assumptions?.loanTermYears}年</p>
           </div>
 
-          <div class="xiao-r-actions">
-            <button id="xiao-r-add-to-excel" class="xiao-r-btn-primary">📊 添加到我的Excel</button>
-            <button id="xiao-r-copy" class="xiao-r-btn-secondary">📋 复制结果</button>
+          <div class="rancho-actions">
+            <button id="rancho-add-to-excel" class="rancho-btn-primary">📊 添加到我的Excel</button>
+            <button id="rancho-copy" class="rancho-btn-secondary">📋 复制结果</button>
           </div>
         </div>
       `;
@@ -220,13 +219,13 @@
     document.body.appendChild(modal);
 
     // 关闭按钮事件
-    modal.querySelector('.xiao-r-close').addEventListener('click', () => modal.remove());
+    modal.querySelector('.rancho-close').addEventListener('click', () => modal.remove());
     modal.addEventListener('click', (e) => {
       if (e.target === modal) modal.remove();
     });
 
     // 添加到 Excel 按钮
-    const addBtn = modal.querySelector('#xiao-r-add-to-excel');
+    const addBtn = modal.querySelector('#rancho-add-to-excel');
     if (addBtn) {
       addBtn.addEventListener('click', () => {
         chrome.runtime.sendMessage({
@@ -244,7 +243,7 @@
     }
 
     // 复制结果按钮
-    const copyBtn = modal.querySelector('#xiao-r-copy');
+    const copyBtn = modal.querySelector('#rancho-copy');
     if (copyBtn) {
       copyBtn.addEventListener('click', () => {
         const text = `房产: ${result.address}\n价格: $${result.price?.toLocaleString()}\n月现金流: $${result.monthlyCashflow?.toLocaleString()}\nCoC回报率: ${result.cashOnCashReturn?.toFixed(2)}%`;
@@ -255,10 +254,14 @@
   }
 
   // 页面加载完成后创建按钮
+  function init() {
+    createRanchoButton();
+  }
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', createXiaoRButton);
+    document.addEventListener('DOMContentLoaded', init);
   } else {
-    createXiaoRButton();
+    init();
   }
 
   // 监听 URL 变化（SPA 导航）
@@ -267,8 +270,15 @@
     const url = location.href;
     if (url !== lastUrl) {
       lastUrl = url;
-      setTimeout(createXiaoRButton, 1000);
+      setTimeout(createRanchoButton, 1000);
     }
   }).observe(document, { subtree: true, childList: true });
+
+  // 确保按钮始终存在
+  setInterval(() => {
+    if (!document.getElementById('rancho-btn')) {
+      createRanchoButton();
+    }
+  }, 2000);
 
 })();

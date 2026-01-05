@@ -1,46 +1,47 @@
-/* 小R 按钮样式 */
-#xiao-r-btn {
+/* Rancho 按钮样式 - 始终固定在右下角 */
+#rancho-btn {
+  position: fixed !important;
+  bottom: 30px !important;
+  right: 30px !important;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
-  padding: 10px 20px;
-  border-radius: 25px;
-  font-size: 16px;
+  padding: 12px 24px;
+  border-radius: 30px;
+  font-size: 18px;
   font-weight: bold;
   cursor: pointer;
-  margin: 10px;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
   transition: all 0.3s ease;
-  z-index: 9999;
+  z-index: 2147483647 !important; /* 最大 z-index */
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-#xiao-r-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+#rancho-btn:hover {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.7);
 }
 
-#xiao-r-btn.xiao-r-fixed {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
+#rancho-btn:active {
+  transform: translateY(-1px) scale(1.02);
 }
 
 /* 弹窗样式 */
-#xiao-r-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+#rancho-modal {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
   background: rgba(0, 0, 0, 0.6);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 10000;
+  z-index: 2147483647 !important;
   backdrop-filter: blur(5px);
 }
 
-.xiao-r-modal-content {
+.rancho-modal-content {
   background: white;
   border-radius: 16px;
   padding: 30px;
@@ -51,6 +52,7 @@
   position: relative;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   animation: slideIn 0.3s ease;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 @keyframes slideIn {
@@ -64,7 +66,7 @@
   }
 }
 
-.xiao-r-close {
+.rancho-close {
   position: absolute;
   top: 15px;
   right: 20px;
@@ -74,11 +76,11 @@
   transition: color 0.2s;
 }
 
-.xiao-r-close:hover {
+.rancho-close:hover {
   color: #333;
 }
 
-.xiao-r-modal-content h2 {
+.rancho-modal-content h2 {
   margin: 0 0 20px 0;
   color: #333;
   font-size: 24px;
@@ -86,26 +88,26 @@
   padding-bottom: 10px;
 }
 
-.xiao-r-section {
+.rancho-section {
   margin-bottom: 20px;
   padding: 15px;
   background: #f8f9fa;
   border-radius: 10px;
 }
 
-.xiao-r-section h3 {
+.rancho-section h3 {
   margin: 0 0 10px 0;
   color: #667eea;
   font-size: 16px;
 }
 
-.xiao-r-section p {
+.rancho-section p {
   margin: 5px 0;
   color: #555;
   font-size: 14px;
 }
 
-.xiao-r-result {
+.rancho-result {
   background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
 }
 
@@ -126,13 +128,13 @@
   color: #721c24;
 }
 
-.xiao-r-actions {
+.rancho-actions {
   display: flex;
   gap: 10px;
   margin-top: 20px;
 }
 
-.xiao-r-btn-primary {
+.rancho-btn-primary {
   flex: 1;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
@@ -145,18 +147,18 @@
   transition: all 0.3s ease;
 }
 
-.xiao-r-btn-primary:hover {
+.rancho-btn-primary:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
-.xiao-r-btn-primary:disabled {
+.rancho-btn-primary:disabled {
   background: #ccc;
   cursor: not-allowed;
   transform: none;
 }
 
-.xiao-r-btn-secondary {
+.rancho-btn-secondary {
   flex: 1;
   background: white;
   color: #667eea;
@@ -169,7 +171,7 @@
   transition: all 0.3s ease;
 }
 
-.xiao-r-btn-secondary:hover {
+.rancho-btn-secondary:hover {
   background: #667eea;
   color: white;
 }
