@@ -87,8 +87,16 @@
         }
 
         if (!data.bathrooms) {
-          const bathsMatch = pageText.match(/([\d.]+)\s*baths?\b/i);
-          if (bathsMatch) data.bathrooms = parseFloat(bathsMatch[1]);
+          // First try to find detailed "X full bath + X half bath" pattern
+          const detailedBathMatch = pageText.match(/(\d+)\s*full\s*baths?\s*\+\s*(\d+)\s*half\s*baths?/i);
+          if (detailedBathMatch) {
+            const fullBaths = parseInt(detailedBathMatch[1]) || 0;
+            const halfBaths = parseInt(detailedBathMatch[2]) || 0;
+            data.bathrooms = fullBaths + (halfBaths * 0.5);
+          } else {
+            const bathsMatch = pageText.match(/([\d.]+)\s*baths?\b/i);
+            if (bathsMatch) data.bathrooms = parseFloat(bathsMatch[1]);
+          }
         }
 
         if (!data.sqft) {
@@ -150,48 +158,48 @@
         });
       }
 
-      // 4. Fallback: Try to get data from __NEXT_DATA__
-      if (!data.bedrooms || !data.bathrooms || !data.sqft) {
-        const nextDataEl = document.getElementById('__NEXT_DATA__');
-        if (nextDataEl) {
-          try {
-            const nextData = JSON.parse(nextDataEl.textContent);
-            const gdpCache = nextData?.props?.pageProps?.gdpClientCache ||
-                            nextData?.props?.pageProps?.componentProps?.gdpClientCache;
+      // 4. Always check __NEXT_DATA__ for accurate data (especially half baths)
+      const nextDataEl = document.getElementById('__NEXT_DATA__');
+      if (nextDataEl) {
+        try {
+          const nextData = JSON.parse(nextDataEl.textContent);
+          const gdpCache = nextData?.props?.pageProps?.gdpClientCache ||
+                          nextData?.props?.pageProps?.componentProps?.gdpClientCache;
 
-            if (gdpCache) {
-              for (const key of Object.keys(gdpCache)) {
-                const entry = gdpCache[key];
-                if (entry?.property) {
-                  const prop = entry.property;
+          if (gdpCache) {
+            for (const key of Object.keys(gdpCache)) {
+              const entry = gdpCache[key];
+              if (entry?.property) {
+                const prop = entry.property;
 
-                  if (!data.bedrooms) data.bedrooms = prop.bedrooms || 0;
-                  if (!data.bathrooms) data.bathrooms = prop.bathrooms || 0;
-                  if (!data.sqft) data.sqft = prop.livingArea || 0;
-                  data.yearBuilt = prop.yearBuilt || 0;
-                  data.zestimateRent = prop.rentZestimate || 0;
-                  data.hoaFee = prop.monthlyHoaFee || 0;
+                // Fill in missing data
+                if (!data.bedrooms) data.bedrooms = prop.bedrooms || 0;
+                if (!data.bathrooms) data.bathrooms = prop.bathrooms || 0;
+                if (!data.sqft) data.sqft = prop.livingArea || 0;
+                data.yearBuilt = prop.yearBuilt || 0;
+                data.zestimateRent = prop.rentZestimate || 0;
+                data.hoaFee = prop.monthlyHoaFee || 0;
 
-                  if (prop.taxAnnualAmount) {
-                    data.propertyTax = prop.taxAnnualAmount / 12;
-                  }
-
-                  // Handle resoFacts for bathrooms (full + half)
-                  if (prop.resoFacts && (!data.bathrooms || data.bathrooms === 0)) {
-                    const fullBaths = prop.resoFacts.bathroomsFull || 0;
-                    const halfBaths = prop.resoFacts.bathroomsHalf || 0;
-                    if (fullBaths || halfBaths) {
-                      data.bathrooms = fullBaths + (halfBaths * 0.5);
-                    }
-                  }
-
-                  break;
+                if (prop.taxAnnualAmount) {
+                  data.propertyTax = prop.taxAnnualAmount / 12;
                 }
+
+                // Always check resoFacts for accurate bathroom count (full + half)
+                // This overrides the simple "2 baths" with accurate "1 full + 1 half = 1.5"
+                if (prop.resoFacts) {
+                  const fullBaths = prop.resoFacts.bathroomsFull || 0;
+                  const halfBaths = prop.resoFacts.bathroomsHalf || 0;
+                  if (fullBaths || halfBaths) {
+                    data.bathrooms = fullBaths + (halfBaths * 0.5);
+                  }
+                }
+
+                break;
               }
             }
-          } catch (e) {
-            console.log('Rancho: Could not parse __NEXT_DATA__', e);
           }
+        } catch (e) {
+          console.log('Rancho: Could not parse __NEXT_DATA__', e);
         }
       }
 
