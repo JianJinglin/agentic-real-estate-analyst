@@ -3,11 +3,23 @@
 (function() {
   'use strict';
 
+  // Check if we're on a property detail page
+  function isPropertyDetailPage() {
+    return window.location.pathname.includes('/homedetails/');
+  }
+
   // Check if already injected
   if (document.getElementById('rancho-btn')) return;
 
   // Create Rancho button - fixed at bottom right
   function createRanchoButton() {
+    // Only show button on property detail pages
+    if (!isPropertyDetailPage()) {
+      const existingBtn = document.getElementById('rancho-btn');
+      if (existingBtn) existingBtn.remove();
+      return;
+    }
+
     // Remove existing button if any
     const existingBtn = document.getElementById('rancho-btn');
     if (existingBtn) existingBtn.remove();
@@ -111,17 +123,33 @@
 
   // Analyze property
   function analyzeProperty() {
+    // Verify we're on a property detail page
+    if (!isPropertyDetailPage()) {
+      showResultModal({ error: 'Please navigate to a property detail page to analyze.' });
+      return;
+    }
+
     const propertyData = scrapePropertyData();
+
+    // Validate we got some data
+    if (!propertyData.price || propertyData.price === 0) {
+      showResultModal({ error: 'Could not find property price. Please make sure you are on a Zillow property detail page.' });
+      return;
+    }
 
     // Send message to background script
     chrome.runtime.sendMessage({
       action: 'analyzeProperty',
       data: propertyData
     }, response => {
+      if (chrome.runtime.lastError) {
+        showResultModal({ error: 'Extension error. Please refresh the page and try again.' });
+        return;
+      }
       if (response && response.success) {
         showResultModal(response.result);
       } else {
-        showResultModal({ error: 'Analysis failed. Please try again.' });
+        showResultModal({ error: response?.error || 'Analysis failed. Please try again.' });
       }
     });
   }
@@ -207,6 +235,10 @@
           action: 'addToExcel',
           data: result
         }, response => {
+          if (chrome.runtime.lastError) {
+            alert('Extension error. Please refresh the page and try again.');
+            return;
+          }
           if (response && response.success) {
             addBtn.textContent = '✅ Added!';
             addBtn.disabled = true;
@@ -230,7 +262,9 @@
 
   // Initialize
   function init() {
-    createRanchoButton();
+    if (isPropertyDetailPage()) {
+      createRanchoButton();
+    }
   }
 
   if (document.readyState === 'loading') {
@@ -245,14 +279,26 @@
     const url = location.href;
     if (url !== lastUrl) {
       lastUrl = url;
-      setTimeout(createRanchoButton, 1000);
+      // Delay to let page load
+      setTimeout(() => {
+        if (isPropertyDetailPage()) {
+          createRanchoButton();
+        } else {
+          // Remove button if not on detail page
+          const existingBtn = document.getElementById('rancho-btn');
+          if (existingBtn) existingBtn.remove();
+        }
+      }, 1000);
     }
   }).observe(document, { subtree: true, childList: true });
 
-  // Ensure button always exists
+  // Ensure button exists on detail pages
   setInterval(() => {
-    if (!document.getElementById('rancho-btn')) {
+    if (isPropertyDetailPage() && !document.getElementById('rancho-btn')) {
       createRanchoButton();
+    } else if (!isPropertyDetailPage()) {
+      const existingBtn = document.getElementById('rancho-btn');
+      if (existingBtn) existingBtn.remove();
     }
   }, 2000);
 
