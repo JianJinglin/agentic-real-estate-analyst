@@ -18,8 +18,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // Load saved settings
   loadSettings();
 
-  // Save GitHub config
-  document.getElementById('save-github').addEventListener('click', saveGitHubConfig);
+  // Save Notion config
+  document.getElementById('save-notion').addEventListener('click', saveNotionConfig);
+
+  // Test Notion connection
+  document.getElementById('test-notion').addEventListener('click', testNotionConnection);
 
   // Save assumptions
   document.getElementById('save-assumptions').addEventListener('click', saveAssumptions);
@@ -48,15 +51,12 @@ function getDefaultAssumptions() {
 
 // Load settings
 function loadSettings() {
-  chrome.storage.sync.get(['githubToken', 'githubRepo', 'githubPath', 'assumptions'], (result) => {
-    if (result.githubToken) {
-      document.getElementById('github-token').value = result.githubToken;
+  chrome.storage.sync.get(['notionToken', 'notionDatabaseId', 'assumptions'], (result) => {
+    if (result.notionToken) {
+      document.getElementById('notion-token').value = result.notionToken;
     }
-    if (result.githubRepo) {
-      document.getElementById('github-repo').value = result.githubRepo;
-    }
-    if (result.githubPath) {
-      document.getElementById('github-path').value = result.githubPath;
+    if (result.notionDatabaseId) {
+      document.getElementById('notion-database').value = result.notionDatabaseId;
     }
 
     const defaults = getDefaultAssumptions();
@@ -82,23 +82,50 @@ function loadSettings() {
   });
 }
 
-// Save GitHub config
-function saveGitHubConfig() {
-  const token = document.getElementById('github-token').value.trim();
-  const repo = document.getElementById('github-repo').value.trim();
-  const path = document.getElementById('github-path').value.trim() || 'data/properties.csv';
+// Save Notion config
+function saveNotionConfig() {
+  const token = document.getElementById('notion-token').value.trim();
+  const databaseId = document.getElementById('notion-database').value.trim();
 
-  if (!token || !repo) {
-    showStatus('github-status', 'error', 'Please fill in Token and Repository');
+  if (!token || !databaseId) {
+    showStatus('notion-status', 'error', 'Please fill in Token and Database ID');
     return;
   }
 
   chrome.storage.sync.set({
-    githubToken: token,
-    githubRepo: repo,
-    githubPath: path
+    notionToken: token,
+    notionDatabaseId: databaseId
   }, () => {
-    showStatus('github-status', 'success', '✅ GitHub config saved');
+    showStatus('notion-status', 'success', '✅ Notion config saved');
+  });
+}
+
+// Test Notion connection
+function testNotionConnection() {
+  const token = document.getElementById('notion-token').value.trim();
+  const databaseId = document.getElementById('notion-database').value.trim();
+
+  if (!token || !databaseId) {
+    showStatus('notion-status', 'error', 'Please fill in Token and Database ID first');
+    return;
+  }
+
+  showStatus('notion-status', 'info', '🔄 Testing connection...');
+
+  chrome.runtime.sendMessage({
+    action: 'testNotionConnection',
+    token: token,
+    databaseId: databaseId
+  }, response => {
+    if (chrome.runtime.lastError) {
+      showStatus('notion-status', 'error', 'Extension error');
+      return;
+    }
+    if (response && response.success) {
+      showStatus('notion-status', 'success', '✅ Connected! Database: ' + (response.title || 'OK'));
+    } else {
+      showStatus('notion-status', 'error', '❌ ' + (response?.error || 'Connection failed'));
+    }
   });
 }
 

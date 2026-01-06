@@ -77,8 +77,18 @@
       if (sqftEl) data.sqft = parseInt(sqftEl.textContent.replace(/,/g, '')) || 0;
 
       // Approach B: Search entire page text for patterns
+      const pageText = document.body.innerText;
+
+      // Search for HOA in page text (e.g., "$230/mo HOA" or "HOA fee: $230")
+      if (!data.hoaFee) {
+        const hoaMatch = pageText.match(/\$\s*([\d,]+)\s*\/?\s*mo(?:nth)?\s*HOA/i) ||
+                         pageText.match(/HOA\s*(?:fee)?:?\s*\$\s*([\d,]+)/i);
+        if (hoaMatch) {
+          data.hoaFee = parseInt(hoaMatch[1].replace(/,/g, '')) || 0;
+        }
+      }
+
       if (!data.bedrooms || !data.bathrooms || !data.sqft) {
-        const pageText = document.body.innerText;
 
         // Match patterns like "4 beds", "2 baths", "1,194 sqft"
         if (!data.bedrooms) {
@@ -184,14 +194,24 @@
                   data.propertyTax = prop.taxAnnualAmount / 12;
                 }
 
-                // Always check resoFacts for accurate bathroom count (full + half)
-                // This overrides the simple "2 baths" with accurate "1 full + 1 half = 1.5"
+                // Check resoFacts for additional data
                 if (prop.resoFacts) {
+                  // Accurate bathroom count (full + half)
                   const fullBaths = prop.resoFacts.bathroomsFull || 0;
                   const halfBaths = prop.resoFacts.bathroomsHalf || 0;
                   if (fullBaths || halfBaths) {
                     data.bathrooms = fullBaths + (halfBaths * 0.5);
                   }
+
+                  // HOA fee from resoFacts (if not found in monthlyHoaFee)
+                  if (!data.hoaFee && prop.resoFacts.associationFee) {
+                    data.hoaFee = prop.resoFacts.associationFee;
+                  }
+                }
+
+                // Also check other possible HOA field locations
+                if (!data.hoaFee) {
+                  data.hoaFee = prop.hoaFee || prop.associationFee || prop.hdpData?.homeInfo?.monthlyHoaFee || 0;
                 }
 
                 break;
@@ -288,11 +308,15 @@
 
           <div class="rancho-section">
             <h3>🏠 Monthly Rent Income</h3>
-            <div class="rancho-row">
-              <p><strong>Monthly Rent:</strong> <span class="highlight-green">$${result.monthlyRent?.toLocaleString()}</span></p>
-              <p><strong>Rent/sqft:</strong> $${result.rentPerSqft}/sqft</p>
+            <div class="rancho-row" style="align-items: center;">
+              <p><strong>Monthly Rent:</strong>
+                <span class="highlight-pink">$</span><input type="number" id="rancho-rent-input" value="${result.monthlyRent || 0}" style="width: 80px; font-size: 14px; font-weight: 600; color: #D4A373; border: 1px solid #ccc; border-radius: 4px; padding: 2px 6px;">
+                <button id="rancho-recalc" style="margin-left: 8px; padding: 4px 10px; font-size: 12px; background: linear-gradient(135deg, #CCD5AE 0%, #D4A373 100%); color: #FEFAE0; border: none; border-radius: 4px; cursor: pointer;">🔄 Recalc</button>
+              </p>
+              <p><strong>Rent/sqft:</strong> $<span id="rancho-rent-sqft" style="color: #CCD5AE; font-weight: 600;">${result.rentPerSqft}</span>/sqft</p>
               <p><strong>Appreciation:</strong> ${result.appreciationRate}%/yr</p>
             </div>
+            <small style="color: #666; font-size: 11px;">💡 Default from Zillow Rent Zestimate. Edit and click Recalc to update.</small>
           </div>
 
           <div class="rancho-section">
@@ -341,7 +365,7 @@
           </div>
 
           <div class="rancho-actions">
-            <button id="rancho-add-to-excel" class="rancho-btn-primary">📊 Add to My Excel</button>
+            <button id="rancho-add-to-excel" class="rancho-btn-primary">📝 Add to Notion</button>
             <button id="rancho-copy" class="rancho-btn-secondary">📋 Copy Results</button>
           </div>
         </div>
@@ -382,10 +406,11 @@
     const copyBtn = modal.querySelector('#rancho-copy');
     if (copyBtn) {
       copyBtn.addEventListener('click', () => {
+        const currentRent = document.getElementById('rancho-rent-input')?.value || result.monthlyRent;
         const text = `Property: ${result.address}
 Price: $${result.price?.toLocaleString()}
 ${result.bedrooms} bed ${result.bathrooms} bath ${result.sqft?.toLocaleString()} sqft
-Monthly Rent: $${result.monthlyRent?.toLocaleString()}
+Monthly Rent: $${parseInt(currentRent)?.toLocaleString()}
 Cashflow @10%: $${result.monthlyCashflow10?.toLocaleString()}/mo
 Cashflow @30%: $${result.monthlyCashflow30?.toLocaleString()}/mo
 Cashflow APY @10%: ${result.cashflowAPY10?.toFixed(2)}%
@@ -393,6 +418,62 @@ Cashflow APY @10%: ${result.cashflowAPY10?.toFixed(2)}%
 Cap Rate: ${result.capRate?.toFixed(2)}%`;
         navigator.clipboard.writeText(text);
         copyBtn.textContent = '✅ Copied!';
+      });
+    }
+
+    // Recalculate button - recalculate with custom rent
+    const recalcBtn = modal.querySelector('#rancho-recalc');
+    if (recalcBtn) {
+      recalcBtn.addEventListener('click', () => {
+        const newRent = parseInt(document.getElementById('rancho-rent-input').value) || 0;
+        recalcBtn.textContent = '⏳...';
+
+        // Create modified property data with custom rent
+        const modifiedData = {
+          ...result,
+          zestimateRent: newRent,
+          // Pass original property info for recalculation
+          price: result.price,
+          bedrooms: result.bedrooms,
+          bathrooms: result.bathrooms,
+          sqft: result.sqft,
+          hoaFee: result.monthlyHoa,
+          propertyTax: result.monthlyTax,
+          insurance: result.monthlyInsurance
+        };
+
+        chrome.runtime.sendMessage({
+          action: 'analyzeProperty',
+          data: modifiedData
+        }, response => {
+          if (response && response.success) {
+            // Update the modal with new results
+            const newResult = response.result;
+            result.monthlyRent = newResult.monthlyRent;
+            result.monthlyCashflow10 = newResult.monthlyCashflow10;
+            result.monthlyCashflow30 = newResult.monthlyCashflow30;
+            result.cashflowAPY10 = newResult.cashflowAPY10;
+            result.cashflowAPY30 = newResult.cashflowAPY30;
+            result.fiveYearAPY10 = newResult.fiveYearAPY10;
+            result.fiveYearAPY30 = newResult.fiveYearAPY30;
+            result.capRate = newResult.capRate;
+            result.rentPerSqft = newResult.rentPerSqft;
+            result.monthlyMaintenance = newResult.monthlyMaintenance;
+            result.monthlyManagement = newResult.monthlyManagement;
+            result.totalMonthlyExpenses = newResult.totalMonthlyExpenses;
+            result.preTaxCashflow = newResult.preTaxCashflow;
+            result.annualCashflow10 = newResult.annualCashflow10;
+            result.annualCashflow30 = newResult.annualCashflow30;
+            result.annualNOI = newResult.annualNOI;
+
+            // Close and reopen modal with new data
+            modal.remove();
+            showResultModal(result);
+          } else {
+            recalcBtn.textContent = '🔄 Recalc';
+            alert('Recalculation failed');
+          }
+        });
       });
     }
   }

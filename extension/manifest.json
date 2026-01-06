@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Rancho - Real Estate Analyst",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "Zillow Property Cashflow Analysis Tool",
   "permissions": [
     "activeTab",
@@ -9,7 +9,7 @@
   ],
   "host_permissions": [
     "https://www.zillow.com/*",
-    "https://api.github.com/*"
+    "https://api.notion.com/*"
   ],
   "action": {
     "default_popup": "popup/popup.html",

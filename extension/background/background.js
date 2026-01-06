@@ -174,101 +174,76 @@ function estimateRent(propertyData) {
   return Math.round(baseRent + bedroomAdjustment);
 }
 
-// Add to GitHub CSV
-async function addToGitHubCSV(result) {
-  // Get GitHub config from storage
-  const config = await chrome.storage.sync.get(['githubToken', 'githubRepo', 'githubPath']);
+// Add to Notion database
+async function addToNotion(result) {
+  // Get Notion config from storage
+  const config = await chrome.storage.sync.get(['notionToken', 'notionDatabaseId']);
 
-  if (!config.githubToken || !config.githubRepo) {
-    throw new Error('Please configure GitHub Token and repository in extension settings first');
+  if (!config.notionToken || !config.notionDatabaseId) {
+    throw new Error('Please configure Notion Token and Database ID in extension settings first');
   }
 
-  const token = config.githubToken;
-  const repo = config.githubRepo; // Format: owner/repo
-  const filePath = config.githubPath || 'data/properties.csv';
+  const token = config.notionToken;
+  const databaseId = config.notionDatabaseId;
 
-  // Get existing file content
-  let existingContent = '';
-  let sha = null;
-
-  try {
-    const getResponse = await fetch(`https://api.github.com/repos/${repo}/contents/${filePath}`, {
-      headers: {
-        'Authorization': `token ${token}`,
-        'Accept': 'application/vnd.github.v3+json'
-      }
-    });
-
-    if (getResponse.ok) {
-      const fileData = await getResponse.json();
-      existingContent = atob(fileData.content);
-      sha = fileData.sha;
-    }
-  } catch (e) {
-    // File doesn't exist, will create new file
-  }
-
-  // CSV headers (expanded)
-  const headers = 'Date,Address,Type,Price,DP%,DP$,Beds,Baths,Sqft,Rent/sqft,Monthly Rent,Mortgage,Tax,Insurance,Maint,Mgmt,HOA,PMI,Cashflow@10%,Cashflow@30%,APY@10%,APY@30%,5yr APY@10%,Cap Rate,URL\n';
-
-  // New row data (expanded)
-  const newRow = [
-    new Date().toLocaleDateString(),
-    `"${result.address || ''}"`,
-    result.propertyType || 'SFR',
-    result.price || 0,
-    (result.downPaymentPercent || 0).toFixed(1) + '%',
-    result.downPayment || 0,
-    result.bedrooms || 0,
-    result.bathrooms || 0,
-    result.sqft || 0,
-    '$' + (result.rentPerSqft || 0),
-    result.monthlyRent || 0,
-    result.monthlyMortgage || 0,
-    result.monthlyTax || 0,
-    result.monthlyInsurance || 0,
-    result.monthlyMaintenance || 0,
-    result.monthlyManagement || 0,
-    result.monthlyHoa || 0,
-    result.monthlyPMI || 0,
-    result.monthlyCashflow10 || 0,
-    result.monthlyCashflow30 || 0,
-    (result.cashflowAPY10 || 0).toFixed(2) + '%',
-    (result.cashflowAPY30 || 0).toFixed(2) + '%',
-    (result.fiveYearAPY10 || 0).toFixed(2) + '%',
-    (result.capRate || 0).toFixed(2) + '%',
-    result.url || ''
-  ].join(',') + '\n';
-
-  // Combine content
-  let newContent;
-  if (!existingContent) {
-    newContent = headers + newRow;
-  } else {
-    newContent = existingContent + newRow;
-  }
-
-  // Update/create file
-  const updateResponse = await fetch(`https://api.github.com/repos/${repo}/contents/${filePath}`, {
-    method: 'PUT',
+  // Create page in Notion database
+  // Using rich_text for flexibility with user's database schema
+  const response = await fetch('https://api.notion.com/v1/pages', {
+    method: 'POST',
     headers: {
-      'Authorization': `token ${token}`,
-      'Accept': 'application/vnd.github.v3+json',
+      'Authorization': `Bearer ${token}`,
+      'Notion-Version': '2022-06-28',
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      message: `Add property: ${result.address || 'Unknown'}`,
-      content: btoa(unescape(encodeURIComponent(newContent))),
-      sha: sha
+      parent: { database_id: databaseId },
+      properties: {
+        // Title property (Address)
+        'Address': {
+          title: [{ text: { content: result.address || 'Unknown' } }]
+        },
+        // Number property
+        'Price': { number: result.price || 0 },
+        // Rich text properties
+        'Beds': { rich_text: [{ text: { content: String(result.bedrooms || 0) } }] },
+        'Baths': { rich_text: [{ text: { content: String(result.bathrooms || 0) } }] },
+        'Sqft': { rich_text: [{ text: { content: (result.sqft?.toLocaleString() || '0') } }] },
+        'Down Payment': { number: result.downPayment || 0 },
+        'Rent': { rich_text: [{ text: { content: '$' + (result.monthlyRent?.toLocaleString() || '0') } }] },
+        'Cashflow': { rich_text: [{ text: { content: '$' + (result.monthlyCashflow10?.toLocaleString() || '0') + '/mo' } }] },
+        'APY': { rich_text: [{ text: { content: (result.cashflowAPY10?.toFixed(2) || '0') + '%' } }] },
+        // URL as rich_text with link
+        'Link': { rich_text: [{ text: { content: 'Zillow', link: { url: result.url || '' } } }] }
+      }
     })
   });
 
-  if (!updateResponse.ok) {
-    const error = await updateResponse.json();
-    throw new Error(error.message || 'Failed to update GitHub');
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to add to Notion');
   }
 
   return { success: true };
+}
+
+// Test Notion connection
+async function testNotionConnection(token, databaseId) {
+  const response = await fetch(`https://api.notion.com/v1/databases/${databaseId}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Notion-Version': '2022-06-28'
+    }
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Connection failed');
+  }
+
+  const data = await response.json();
+  const title = data.title?.[0]?.plain_text || 'Database';
+  return { success: true, title };
 }
 
 // Message listener
@@ -288,10 +263,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === 'addToExcel') {
-    addToGitHubCSV(request.data)
+    addToNotion(request.data)
       .then(result => sendResponse({ success: true }))
       .catch(error => sendResponse({ success: false, error: error.message }));
     return true; // Keep message channel open
+  }
+
+  if (request.action === 'testNotionConnection') {
+    testNotionConnection(request.token, request.databaseId)
+      .then(result => sendResponse(result))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
   }
 
   if (request.action === 'getAssumptions') {

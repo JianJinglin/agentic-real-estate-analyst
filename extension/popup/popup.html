@@ -22,22 +22,20 @@
     <!-- Settings Tab -->
     <div class="tab-content active" id="settings">
       <div class="section">
-        <h3>🔗 GitHub Connection</h3>
+        <h3>📝 Notion Connection</h3>
         <div class="form-group">
-          <label>GitHub Token</label>
-          <input type="password" id="github-token" placeholder="ghp_xxxx...">
-          <small>Personal Access Token with repo permission</small>
+          <label>Notion API Token</label>
+          <input type="password" id="notion-token" placeholder="ntn_xxxx...">
+          <small>Internal integration token from <a href="https://www.notion.so/my-integrations" target="_blank">Notion Integrations</a></small>
         </div>
         <div class="form-group">
-          <label>Repository (owner/repo)</label>
-          <input type="text" id="github-repo" placeholder="JianJinglin/agentic-real-estate-analyst">
+          <label>Database ID</label>
+          <input type="text" id="notion-database" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+          <small>The ID of your property tracking database</small>
         </div>
-        <div class="form-group">
-          <label>CSV File Path</label>
-          <input type="text" id="github-path" placeholder="data/properties.csv">
-        </div>
-        <button id="save-github" class="btn-primary">💾 Save Config</button>
-        <div id="github-status" class="status"></div>
+        <button id="save-notion" class="btn-primary">💾 Save Config</button>
+        <button id="test-notion" class="btn-secondary">🔗 Test Connection</button>
+        <div id="notion-status" class="status"></div>
       </div>
     </div>
 
@@ -127,17 +125,19 @@
           <li>Open a Zillow property detail page</li>
           <li>Click the "🏠 Rancho" button on the page</li>
           <li>View the cashflow analysis results</li>
-          <li>Click "Add to My Excel" to save to GitHub</li>
+          <li>Click "Add to Notion" to save to your database</li>
         </ol>
       </div>
 
       <div class="section">
-        <h3>🔑 Get GitHub Token</h3>
+        <h3>🔑 Setup Notion Integration</h3>
         <ol>
-          <li>Visit <a href="https://github.com/settings/tokens" target="_blank">GitHub Settings > Tokens</a></li>
-          <li>Click "Generate new token (classic)"</li>
-          <li>Check the "repo" permission</li>
-          <li>Copy the generated Token</li>
+          <li>Visit <a href="https://www.notion.so/my-integrations" target="_blank">Notion Integrations</a></li>
+          <li>Create a new internal integration</li>
+          <li>Copy the "Internal Integration Secret"</li>
+          <li>In your Notion page, create an inline database</li>
+          <li>Share the database with your integration</li>
+          <li>Copy the database ID from the URL</li>
         </ol>
       </div>
 
@@ -153,7 +153,7 @@
     </div>
 
     <footer>
-      <p>v1.1.0 | Made with ❤️</p>
+      <p>v1.2.0 | Made with ❤️</p>
     </footer>
   </div>
 
