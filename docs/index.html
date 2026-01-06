@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rancho - Real Estate Cashflow Analyzer</title>
+  <meta name="description" content="Analyze Zillow property cashflow instantly. Calculate mortgage, expenses, APY, and sync to Notion.">
+  <link rel="icon" type="image/png" href="icon128.png">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: linear-gradient(135deg, #FEFAE0 0%, #FAEDCD 100%);
+      min-height: 100vh;
+      color: #333;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* Header */
+    header {
+      padding: 20px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #D4A373;
+    }
+
+    .logo img {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+    }
+
+    .cta-button {
+      background: linear-gradient(135deg, #CCD5AE 0%, #D4A373 100%);
+      color: #FEFAE0;
+      padding: 12px 24px;
+      border-radius: 30px;
+      text-decoration: none;
+      font-weight: 600;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    .cta-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(212, 163, 115, 0.4);
+    }
+
+    /* Hero */
+    .hero {
+      padding: 60px 0 80px;
+      text-align: center;
+    }
+
+    .hero h1 {
+      font-size: 3rem;
+      color: #333;
+      margin-bottom: 20px;
+      line-height: 1.2;
+    }
+
+    .hero h1 span {
+      background: linear-gradient(135deg, #CCD5AE 0%, #D4A373 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      font-size: 1.25rem;
+      color: #666;
+      max-width: 600px;
+      margin: 0 auto 40px;
+      line-height: 1.6;
+    }
+
+    .hero-buttons {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .hero-buttons .cta-button {
+      font-size: 1.1rem;
+      padding: 16px 32px;
+    }
+
+    .secondary-button {
+      background: transparent;
+      border: 2px solid #D4A373;
+      color: #D4A373;
+      padding: 14px 30px;
+      border-radius: 30px;
+      text-decoration: none;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    .secondary-button:hover {
+      background: #D4A373;
+      color: #FEFAE0;
+    }
+
+    /* Screenshot */
+    .screenshot {
+      max-width: 900px;
+      margin: 0 auto;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+      overflow: hidden;
+    }
+
+    .screenshot img {
+      width: 100%;
+      display: block;
+    }
+
+    /* Features */
+    .features {
+      padding: 80px 0;
+      background: white;
+    }
+
+    .features h2 {
+      text-align: center;
+      font-size: 2rem;
+      margin-bottom: 50px;
+      color: #333;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 30px;
+    }
+
+    .feature-card {
+      background: #FEFAE0;
+      padding: 30px;
+      border-radius: 16px;
+      text-align: center;
+      transition: transform 0.3s;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-5px);
+    }
+
+    .feature-icon {
+      font-size: 3rem;
+      margin-bottom: 16px;
+    }
+
+    .feature-card h3 {
+      color: #D4A373;
+      margin-bottom: 12px;
+      font-size: 1.25rem;
+    }
+
+    .feature-card p {
+      color: #666;
+      line-height: 1.6;
+    }
+
+    /* How it works */
+    .how-it-works {
+      padding: 80px 0;
+    }
+
+    .how-it-works h2 {
+      text-align: center;
+      font-size: 2rem;
+      margin-bottom: 50px;
+    }
+
+    .steps {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      flex-wrap: wrap;
+    }
+
+    .step {
+      text-align: center;
+      max-width: 250px;
+    }
+
+    .step-number {
+      width: 50px;
+      height: 50px;
+      background: linear-gradient(135deg, #CCD5AE 0%, #D4A373 100%);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin: 0 auto 16px;
+    }
+
+    .step h3 {
+      color: #333;
+      margin-bottom: 8px;
+    }
+
+    .step p {
+      color: #666;
+      font-size: 0.95rem;
+    }
+
+    /* Calculations */
+    .calculations {
+      padding: 80px 0;
+      background: white;
+    }
+
+    .calculations h2 {
+      text-align: center;
+      font-size: 2rem;
+      margin-bottom: 50px;
+    }
+
+    .calc-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .calc-item {
+      background: #FEFAE0;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+    }
+
+    .calc-item strong {
+      color: #D4A373;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .calc-item span {
+      color: #666;
+      font-size: 0.9rem;
+    }
+
+    /* Footer */
+    footer {
+      padding: 40px 0;
+      text-align: center;
+      color: #888;
+    }
+
+    footer a {
+      color: #D4A373;
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .hero h1 {
+        font-size: 2rem;
+      }
+
+      .hero p {
+        font-size: 1rem;
+      }
+
+      header {
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .steps {
+        flex-direction: column;
+        align-items: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">
+        <img src="icon128.png" alt="Rancho Logo">
+        Rancho
+      </div>
+      <a href="https://chrome.google.com/webstore" class="cta-button">Add to Chrome</a>
+    </header>
+
+    <section class="hero">
+      <h1>Analyze Real Estate <span>Cashflow</span> in One Click</h1>
+      <p>Instantly calculate rental property returns on Zillow. Get mortgage breakdown, expenses, APY, and sync to Notion - all without leaving the page.</p>
+      <div class="hero-buttons">
+        <a href="https://chrome.google.com/webstore" class="cta-button">Install Free Extension</a>
+        <a href="https://github.com/JianJinglin/agentic-real-estate-analyst" class="secondary-button">View on GitHub</a>
+      </div>
+    </section>
+
+    <div class="screenshot">
+      <img src="screenshot_store_1280x800.jpg" alt="Rancho Cashflow Analysis Screenshot">
+    </div>
+  </div>
+
+  <section class="features">
+    <div class="container">
+      <h2>Why Rancho?</h2>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">⚡</div>
+          <h3>One-Click Analysis</h3>
+          <p>Analyze any Zillow listing instantly. No copy-paste, no spreadsheets, no manual calculations.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📊</div>
+          <h3>Complete Breakdown</h3>
+          <p>See mortgage, taxes, insurance, PMI, maintenance, and property management all in one view.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">💰</div>
+          <h3>ROI Calculations</h3>
+          <p>Get Cash-on-Cash APY, Cap Rate, and 5-year returns with appreciation factored in.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📝</div>
+          <h3>Notion Sync</h3>
+          <p>Save properties to your Notion database with one click for easy comparison and tracking.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">⚙️</div>
+          <h3>Customizable</h3>
+          <p>Adjust down payment, interest rate, tax rates, and all other parameters to match your situation.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🔄</div>
+          <h3>Edit & Recalculate</h3>
+          <p>Override rent estimates and instantly recalculate all metrics with your own numbers.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="how-it-works">
+    <div class="container">
+      <h2>How It Works</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="step-number">1</div>
+          <h3>Browse Zillow</h3>
+          <p>Open any property detail page on Zillow</p>
+        </div>
+        <div class="step">
+          <div class="step-number">2</div>
+          <h3>Click Rancho</h3>
+          <p>Hit the Rancho button in the bottom-right corner</p>
+        </div>
+        <div class="step">
+          <div class="step-number">3</div>
+          <h3>See Results</h3>
+          <p>Get instant cashflow analysis with all the numbers</p>
+        </div>
+        <div class="step">
+          <div class="step-number">4</div>
+          <h3>Save to Notion</h3>
+          <p>One click to save to your property database</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="calculations">
+    <div class="container">
+      <h2>What You'll See</h2>
+      <div class="calc-grid">
+        <div class="calc-item">
+          <strong>Monthly Rent</strong>
+          <span>Zillow Zestimate or custom</span>
+        </div>
+        <div class="calc-item">
+          <strong>Mortgage (P&I)</strong>
+          <span>Principal & Interest</span>
+        </div>
+        <div class="calc-item">
+          <strong>Property Tax</strong>
+          <span>Monthly tax payment</span>
+        </div>
+        <div class="calc-item">
+          <strong>Insurance</strong>
+          <span>Homeowner's insurance</span>
+        </div>
+        <div class="calc-item">
+          <strong>PMI</strong>
+          <span>When LTV > 80%</span>
+        </div>
+        <div class="calc-item">
+          <strong>HOA Fees</strong>
+          <span>If applicable</span>
+        </div>
+        <div class="calc-item">
+          <strong>Maintenance</strong>
+          <span>% of monthly rent</span>
+        </div>
+        <div class="calc-item">
+          <strong>Cashflow</strong>
+          <span>After all expenses</span>
+        </div>
+        <div class="calc-item">
+          <strong>Cash-on-Cash APY</strong>
+          <span>Return on down payment</span>
+        </div>
+        <div class="calc-item">
+          <strong>Cap Rate</strong>
+          <span>NOI / Price</span>
+        </div>
+        <div class="calc-item">
+          <strong>5-Year APY</strong>
+          <span>With appreciation</span>
+        </div>
+        <div class="calc-item">
+          <strong>Tax Scenarios</strong>
+          <span>10% vs 30% brackets</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <p>Made with ❤️ by <a href="https://github.com/JianJinglin">Jinglin Jian</a></p>
+      <p style="margin-top: 8px;">
+        <a href="https://github.com/JianJinglin/agentic-real-estate-analyst">GitHub</a> ·
+        <a href="https://github.com/JianJinglin/agentic-real-estate-analyst/issues">Support</a>
+      </p>
+    </div>
+  </footer>
+</body>
+</html>
