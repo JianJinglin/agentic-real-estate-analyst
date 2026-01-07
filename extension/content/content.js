@@ -291,13 +291,13 @@
         </div>
 
         <div class="rancho-settings-tabs">
-          <button class="rancho-settings-tab active" data-tab="settings">Settings</button>
-          <button class="rancho-settings-tab" data-tab="params">Parameters</button>
+          <button class="rancho-settings-tab" data-tab="settings">Settings</button>
+          <button class="rancho-settings-tab active" data-tab="params">Parameters</button>
           <button class="rancho-settings-tab" data-tab="help">Help</button>
         </div>
 
         <!-- Settings Tab -->
-        <div class="rancho-settings-tab-content active" id="rancho-panel-settings">
+        <div class="rancho-settings-tab-content" id="rancho-panel-settings">
           <div class="rancho-panel-section">
             <h3>📊 Google Sheets</h3>
             <div class="rancho-panel-form-group">
@@ -326,7 +326,7 @@
         </div>
 
         <!-- Parameters Tab -->
-        <div class="rancho-settings-tab-content" id="rancho-panel-params">
+        <div class="rancho-settings-tab-content active" id="rancho-panel-params">
           <div class="rancho-panel-section">
             <h3>🏷️ Property</h3>
             <div class="rancho-panel-form-group">
