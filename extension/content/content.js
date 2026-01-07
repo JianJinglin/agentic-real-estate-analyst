@@ -281,7 +281,9 @@
   }
 
   // Generate settings panel HTML
-  function getSettingsPanelHTML() {
+  function getSettingsPanelHTML(result) {
+    const price = result?.price || 0;
+    const rent = result?.monthlyRent || 0;
     return `
       <div class="rancho-settings-panel">
         <div class="rancho-settings-header">
@@ -325,6 +327,18 @@
 
         <!-- Parameters Tab -->
         <div class="rancho-settings-tab-content" id="rancho-panel-params">
+          <div class="rancho-panel-section">
+            <h3>🏷️ Property</h3>
+            <div class="rancho-panel-form-group">
+              <label>Price ($)</label>
+              <input type="number" id="rancho-panel-price" value="${price}" step="1000">
+            </div>
+            <div class="rancho-panel-form-group">
+              <label>Monthly Rent ($)</label>
+              <input type="number" id="rancho-panel-rent" value="${rent}" step="50">
+            </div>
+          </div>
+
           <div class="rancho-panel-section">
             <h3>💰 Loan</h3>
             <div class="rancho-panel-form-row">
@@ -427,7 +441,7 @@
   }
 
   // Setup settings panel events
-  function setupSettingsPanelEvents(modal) {
+  function setupSettingsPanelEvents(modal, currentResult) {
     // Tab switching
     const tabs = modal.querySelectorAll('.rancho-settings-tab');
     tabs.forEach(tab => {
@@ -438,6 +452,34 @@
         modal.querySelector('#rancho-panel-' + tab.dataset.tab).classList.add('active');
       });
     });
+
+    // Helper function to recalculate and refresh
+    function recalculateAndRefresh() {
+      const newPrice = parseInt(modal.querySelector('#rancho-panel-price').value) || currentResult.price;
+      const newRent = parseInt(modal.querySelector('#rancho-panel-rent').value) || currentResult.monthlyRent;
+
+      const modifiedData = {
+        ...currentResult,
+        zestimateRent: newRent,
+        price: newPrice,
+        bedrooms: currentResult.bedrooms,
+        bathrooms: currentResult.bathrooms,
+        sqft: currentResult.sqft,
+        hoaFee: currentResult.monthlyHoa,
+        propertyTax: currentResult.monthlyTax,
+        insurance: currentResult.monthlyInsurance
+      };
+
+      chrome.runtime.sendMessage({
+        action: 'analyzeProperty',
+        data: modifiedData
+      }, response => {
+        if (response && response.success) {
+          modal.remove();
+          showResultModal(response.result);
+        }
+      });
+    }
 
     // Load settings
     chrome.storage.sync.get(['notionToken', 'notionDatabaseId', 'gSheetsUrl', 'assumptions'], (result) => {
@@ -528,7 +570,7 @@
       });
     });
 
-    // Save Parameters
+    // Save Parameters and refresh
     modal.querySelector('#rancho-panel-save-params').addEventListener('click', () => {
       const defaults = getDefaultAssumptions();
       const assumptions = {
@@ -546,11 +588,13 @@
         appreciationRate: parseFloat(modal.querySelector('#rancho-panel-appreciation-rate').value) || defaults.appreciationRate
       };
       chrome.storage.sync.set({ assumptions }, () => {
-        showPanelStatus(modal, 'rancho-panel-params-status', 'success', '✅ Saved');
+        showPanelStatus(modal, 'rancho-panel-params-status', 'success', '✅ Saved & Refreshing...');
+        // Recalculate with new parameters
+        setTimeout(recalculateAndRefresh, 300);
       });
     });
 
-    // Reset Parameters
+    // Reset Parameters and refresh
     modal.querySelector('#rancho-panel-reset-params').addEventListener('click', () => {
       const defaults = getDefaultAssumptions();
       modal.querySelector('#rancho-panel-down-payment').value = defaults.downPaymentPercent;
@@ -566,7 +610,9 @@
       modal.querySelector('#rancho-panel-high-income-tax-rate').value = defaults.highIncomeTaxRate;
       modal.querySelector('#rancho-panel-appreciation-rate').value = defaults.appreciationRate;
       chrome.storage.sync.set({ assumptions: defaults }, () => {
-        showPanelStatus(modal, 'rancho-panel-params-status', 'success', '✅ Reset');
+        showPanelStatus(modal, 'rancho-panel-params-status', 'success', '✅ Reset & Refreshing...');
+        // Recalculate with default parameters
+        setTimeout(recalculateAndRefresh, 300);
       });
     });
   }
@@ -605,7 +651,7 @@
       modal.innerHTML = `
         <div class="rancho-modal-wrapper rancho-dual-panel">
           <!-- Left: Settings Panel -->
-          ${getSettingsPanelHTML()}
+          ${getSettingsPanelHTML(result)}
 
           <!-- Right: Analysis Results -->
           <div class="rancho-modal-content rancho-expanded">
@@ -624,28 +670,21 @@
 
               <div class="rancho-section">
                 <h3>💵 Purchase & Loan</h3>
-                <p><strong>Price:</strong>
-                  <span class="highlight-pink">$</span><input type="number" id="rancho-price-input" value="${result.price || 0}" style="width: 100px; font-size: 14px; font-weight: 600; color: #D4A373; border: 1px solid #ccc; border-radius: 4px; padding: 2px 6px;">
-                </p>
-                <p><strong>Down Payment:</strong> <span id="rancho-dp-display">${result.downPaymentPercent}% ($${result.downPayment?.toLocaleString()})</span></p>
-                <p><strong>Loan Amount:</strong> $<span id="rancho-loan-display">${result.loanAmount?.toLocaleString()}</span></p>
-                <p><strong>LTV:</strong> <span id="rancho-ltv-display">${result.ltv}</span>%</p>
+                <p><strong>Price:</strong> <span class="highlight-pink">$${result.price?.toLocaleString()}</span></p>
+                <p><strong>Down Payment:</strong> ${result.downPaymentPercent}% ($${result.downPayment?.toLocaleString()})</p>
+                <p><strong>Loan Amount:</strong> $${result.loanAmount?.toLocaleString()}</p>
+                <p><strong>LTV:</strong> ${result.ltv}%</p>
                 <p><strong>Rate:</strong> ${result.assumptions?.interestRate}% / ${result.assumptions?.loanTermYears}yr</p>
-                <small style="color: #666; font-size: 11px;">💡 Edit price and click Recalc below to update calculations.</small>
               </div>
             </div>
 
             <div class="rancho-section">
               <h3>🏠 Monthly Rent Income</h3>
               <div class="rancho-row" style="align-items: center;">
-                <p><strong>Monthly Rent:</strong>
-                  <span class="highlight-pink">$</span><input type="number" id="rancho-rent-input" value="${result.monthlyRent || 0}" style="width: 80px; font-size: 14px; font-weight: 600; color: #D4A373; border: 1px solid #ccc; border-radius: 4px; padding: 2px 6px;">
-                  <button id="rancho-recalc" style="margin-left: 8px; padding: 4px 10px; font-size: 12px; background: linear-gradient(135deg, #CCD5AE 0%, #D4A373 100%); color: #FEFAE0; border: none; border-radius: 4px; cursor: pointer;">🔄 Recalc</button>
-                </p>
-                <p><strong>Rent/sqft:</strong> $<span id="rancho-rent-sqft" style="color: #CCD5AE; font-weight: 600;">${result.rentPerSqft}</span>/sqft</p>
+                <p><strong>Monthly Rent:</strong> <span class="highlight-pink">$${result.monthlyRent?.toLocaleString()}</span></p>
+                <p><strong>Rent/sqft:</strong> <span style="color: #CCD5AE; font-weight: 600;">$${result.rentPerSqft}</span>/sqft</p>
                 <p><strong>Appreciation:</strong> ${result.appreciationRate}%/yr</p>
               </div>
-              <small style="color: #666; font-size: 11px;">💡 Default from Zillow Rent Zestimate. Edit and click Recalc to update.</small>
             </div>
 
             <div class="rancho-section">
@@ -707,7 +746,7 @@
 
     // Setup settings panel events (only if not error modal)
     if (!result.error) {
-      setupSettingsPanelEvents(modal);
+      setupSettingsPanelEvents(modal, result);
     }
 
     // Close button
@@ -770,11 +809,10 @@
     const copyBtn = modal.querySelector('#rancho-copy');
     if (copyBtn) {
       copyBtn.addEventListener('click', () => {
-        const currentRent = document.getElementById('rancho-rent-input')?.value || result.monthlyRent;
         const text = `Property: ${result.address}
 Price: $${result.price?.toLocaleString()}
 ${result.bedrooms} bed ${result.bathrooms} bath ${result.sqft?.toLocaleString()} sqft
-Monthly Rent: $${parseInt(currentRent)?.toLocaleString()}
+Monthly Rent: $${result.monthlyRent?.toLocaleString()}
 Cashflow @10%: $${result.monthlyCashflow10?.toLocaleString()}/mo
 Cashflow @30%: $${result.monthlyCashflow30?.toLocaleString()}/mo
 Cashflow APY @10%: ${result.cashflowAPY10?.toFixed(2)}%
@@ -782,72 +820,6 @@ Cashflow APY @10%: ${result.cashflowAPY10?.toFixed(2)}%
 Cap Rate: ${result.capRate?.toFixed(2)}%`;
         navigator.clipboard.writeText(text);
         copyBtn.textContent = '✅ Copied!';
-      });
-    }
-
-    // Recalculate button - recalculate with custom rent and price
-    const recalcBtn = modal.querySelector('#rancho-recalc');
-    if (recalcBtn) {
-      recalcBtn.addEventListener('click', () => {
-        const newRent = parseInt(document.getElementById('rancho-rent-input').value) || 0;
-        const newPrice = parseInt(document.getElementById('rancho-price-input').value) || result.price;
-        recalcBtn.textContent = '⏳...';
-
-        // Create modified property data with custom rent and price
-        const modifiedData = {
-          ...result,
-          zestimateRent: newRent,
-          // Pass property info for recalculation (price may be modified)
-          price: newPrice,
-          bedrooms: result.bedrooms,
-          bathrooms: result.bathrooms,
-          sqft: result.sqft,
-          hoaFee: result.monthlyHoa,
-          propertyTax: result.monthlyTax,
-          insurance: result.monthlyInsurance
-        };
-
-        chrome.runtime.sendMessage({
-          action: 'analyzeProperty',
-          data: modifiedData
-        }, response => {
-          if (response && response.success) {
-            // Update the modal with new results
-            const newResult = response.result;
-            result.price = newResult.price;
-            result.downPayment = newResult.downPayment;
-            result.loanAmount = newResult.loanAmount;
-            result.ltv = newResult.ltv;
-            result.monthlyRent = newResult.monthlyRent;
-            result.monthlyMortgage = newResult.monthlyMortgage;
-            result.monthlyTax = newResult.monthlyTax;
-            result.monthlyInsurance = newResult.monthlyInsurance;
-            result.monthlyPMI = newResult.monthlyPMI;
-            result.monthlyCashflow10 = newResult.monthlyCashflow10;
-            result.monthlyCashflow30 = newResult.monthlyCashflow30;
-            result.cashflowAPY10 = newResult.cashflowAPY10;
-            result.cashflowAPY30 = newResult.cashflowAPY30;
-            result.fiveYearAPY10 = newResult.fiveYearAPY10;
-            result.fiveYearAPY30 = newResult.fiveYearAPY30;
-            result.capRate = newResult.capRate;
-            result.rentPerSqft = newResult.rentPerSqft;
-            result.monthlyMaintenance = newResult.monthlyMaintenance;
-            result.monthlyManagement = newResult.monthlyManagement;
-            result.totalMonthlyExpenses = newResult.totalMonthlyExpenses;
-            result.preTaxCashflow = newResult.preTaxCashflow;
-            result.annualCashflow10 = newResult.annualCashflow10;
-            result.annualCashflow30 = newResult.annualCashflow30;
-            result.annualAppreciation = newResult.annualAppreciation;
-            result.annualNOI = newResult.annualNOI;
-
-            // Close and reopen modal with new data
-            modal.remove();
-            showResultModal(result);
-          } else {
-            recalcBtn.textContent = '🔄 Recalc';
-            alert('Recalculation failed');
-          }
-        });
       });
     }
   }
