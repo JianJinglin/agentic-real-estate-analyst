@@ -11,6 +11,363 @@
   // Check if already injected
   if (document.getElementById('rancho-btn')) return;
 
+  // Default assumptions - must match background.js
+  function getDefaultAssumptions() {
+    return {
+      downPaymentPercent: 3.5,
+      interestRate: 6.0,
+      loanTermYears: 30,
+      propertyTaxRate: 2.5,
+      insuranceRate: 0.3,
+      maintenancePercent: 5,
+      vacancyRate: 0,
+      propertyManagementPercent: 10,
+      incomeTaxRate: 10,
+      highIncomeTaxRate: 30,
+      mortgageInsuranceRate: 0.75,
+      appreciationRate: 3
+    };
+  }
+
+  // Create Settings Sidebar
+  function createSettingsSidebar() {
+    if (document.getElementById('rancho-sidebar')) return;
+
+    const sidebar = document.createElement('div');
+    sidebar.id = 'rancho-sidebar';
+    sidebar.innerHTML = `
+      <div class="rancho-sidebar-toggle" id="rancho-sidebar-toggle">⚙️</div>
+      <div class="rancho-sidebar-content" id="rancho-sidebar-content">
+        <div class="rancho-sidebar-header">
+          <h2>🏠 Rancho Settings</h2>
+          <span class="rancho-sidebar-close" id="rancho-sidebar-close">&times;</span>
+        </div>
+
+        <div class="rancho-sidebar-tabs">
+          <button class="rancho-sidebar-tab active" data-tab="settings">⚙️ Settings</button>
+          <button class="rancho-sidebar-tab" data-tab="assumptions">📊 Parameters</button>
+          <button class="rancho-sidebar-tab" data-tab="help">❓ Help</button>
+        </div>
+
+        <!-- Settings Tab -->
+        <div class="rancho-sidebar-tab-content active" id="rancho-tab-settings">
+          <div class="rancho-sidebar-section">
+            <h3>📊 Google Sheets Connection</h3>
+            <div class="rancho-form-group">
+              <label>Google Apps Script URL</label>
+              <input type="text" id="rancho-gsheets-url" placeholder="https://script.google.com/macros/s/xxx/exec">
+              <small>Deploy URL from your Google Apps Script</small>
+            </div>
+            <button id="rancho-save-gsheets" class="rancho-sidebar-btn-primary">💾 Save Config</button>
+            <button id="rancho-test-gsheets" class="rancho-sidebar-btn-secondary">🔗 Test Connection</button>
+            <div id="rancho-gsheets-status" class="rancho-sidebar-status"></div>
+          </div>
+
+          <div class="rancho-sidebar-section">
+            <h3>📝 Notion Connection (Optional)</h3>
+            <div class="rancho-form-group">
+              <label>Notion API Token</label>
+              <input type="password" id="rancho-notion-token" placeholder="ntn_xxxx...">
+              <small>Internal integration token from Notion</small>
+            </div>
+            <div class="rancho-form-group">
+              <label>Database ID</label>
+              <input type="text" id="rancho-notion-database" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+              <small>Your property tracking database ID</small>
+            </div>
+            <button id="rancho-save-notion" class="rancho-sidebar-btn-primary">💾 Save Config</button>
+            <button id="rancho-test-notion" class="rancho-sidebar-btn-secondary">🔗 Test Connection</button>
+            <div id="rancho-notion-status" class="rancho-sidebar-status"></div>
+          </div>
+        </div>
+
+        <!-- Assumptions Tab -->
+        <div class="rancho-sidebar-tab-content" id="rancho-tab-assumptions">
+          <div class="rancho-sidebar-section">
+            <h3>💰 Loan Parameters</h3>
+            <div class="rancho-form-group">
+              <label>Down Payment (%)</label>
+              <input type="number" id="rancho-down-payment" value="3.5" step="0.5" min="0" max="100">
+            </div>
+            <div class="rancho-form-group">
+              <label>Interest Rate (%)</label>
+              <input type="number" id="rancho-interest-rate" value="6.0" step="0.125" min="0">
+            </div>
+            <div class="rancho-form-group">
+              <label>Loan Term (years)</label>
+              <input type="number" id="rancho-loan-term" value="30" min="1" max="40">
+            </div>
+            <div class="rancho-form-group">
+              <label>PMI Rate (%/year)</label>
+              <input type="number" id="rancho-pmi-rate" value="0.75" step="0.05" min="0">
+            </div>
+          </div>
+
+          <div class="rancho-sidebar-section">
+            <h3>🏦 Expense Parameters</h3>
+            <div class="rancho-form-group">
+              <label>Property Tax Rate (%/year)</label>
+              <input type="number" id="rancho-property-tax" value="2.5" step="0.1" min="0">
+            </div>
+            <div class="rancho-form-group">
+              <label>Insurance Rate (%/year)</label>
+              <input type="number" id="rancho-insurance-rate" value="0.3" step="0.05" min="0">
+            </div>
+            <div class="rancho-form-group">
+              <label>Maintenance (% of rent)</label>
+              <input type="number" id="rancho-maintenance-percent" value="5" step="1" min="0">
+            </div>
+            <div class="rancho-form-group">
+              <label>Property Mgmt (% of rent)</label>
+              <input type="number" id="rancho-management-percent" value="10" step="1" min="0">
+            </div>
+            <div class="rancho-form-group">
+              <label>Vacancy Rate (%)</label>
+              <input type="number" id="rancho-vacancy-rate" value="0" step="1" min="0" max="100">
+            </div>
+          </div>
+
+          <div class="rancho-sidebar-section">
+            <h3>📈 Tax & Returns</h3>
+            <div class="rancho-form-group">
+              <label>Income Tax Rate (%)</label>
+              <input type="number" id="rancho-income-tax-rate" value="10" step="1" min="0" max="50">
+            </div>
+            <div class="rancho-form-group">
+              <label>High Income Tax Rate (%)</label>
+              <input type="number" id="rancho-high-income-tax-rate" value="30" step="1" min="0" max="50">
+            </div>
+            <div class="rancho-form-group">
+              <label>Appreciation Rate (%/year)</label>
+              <input type="number" id="rancho-appreciation-rate" value="3" step="0.5" min="0" max="20">
+            </div>
+          </div>
+
+          <button id="rancho-save-assumptions" class="rancho-sidebar-btn-primary">💾 Save Parameters</button>
+          <button id="rancho-reset-assumptions" class="rancho-sidebar-btn-secondary">🔄 Reset to Defaults</button>
+          <div id="rancho-assumptions-status" class="rancho-sidebar-status"></div>
+        </div>
+
+        <!-- Help Tab -->
+        <div class="rancho-sidebar-tab-content" id="rancho-tab-help">
+          <div class="rancho-sidebar-section">
+            <h3>📖 How to Use</h3>
+            <ol>
+              <li>Open a Zillow property detail page</li>
+              <li>Click the "🏠 Rancho" button on the page</li>
+              <li>View the cashflow analysis results</li>
+              <li>Click "Add to Sheets" or "Add to Notion" to save</li>
+            </ol>
+          </div>
+
+          <div class="rancho-sidebar-section">
+            <h3>📊 Setup Google Sheets</h3>
+            <ol>
+              <li>Create a new Google Sheet</li>
+              <li>Go to Extensions → Apps Script</li>
+              <li>Paste the script from GitHub</li>
+              <li>Deploy as Web app</li>
+              <li>Copy the URL to Settings tab</li>
+            </ol>
+          </div>
+
+          <div class="rancho-sidebar-section">
+            <h3>📊 Calculation Formulas</h3>
+            <p><strong>PMI</strong> = IF(LTV > 80%, loan × 0.75% / 12, 0)</p>
+            <p><strong>Cashflow</strong> = Rent - Expenses - Tax</p>
+            <p><strong>Cashflow APY</strong> = Annual Cashflow / Down Payment</p>
+          </div>
+        </div>
+
+        <div class="rancho-sidebar-footer">
+          <p>v1.3.0 | Made with ❤️</p>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(sidebar);
+
+    // Setup sidebar event listeners
+    setupSidebarEvents();
+    loadSidebarSettings();
+  }
+
+  // Setup sidebar event listeners
+  function setupSidebarEvents() {
+    // Toggle sidebar
+    const toggle = document.getElementById('rancho-sidebar-toggle');
+    const content = document.getElementById('rancho-sidebar-content');
+    const close = document.getElementById('rancho-sidebar-close');
+
+    toggle.addEventListener('click', () => {
+      content.classList.toggle('open');
+      toggle.classList.toggle('hidden');
+    });
+
+    close.addEventListener('click', () => {
+      content.classList.remove('open');
+      toggle.classList.remove('hidden');
+    });
+
+    // Tab switching
+    const tabs = document.querySelectorAll('.rancho-sidebar-tab');
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.rancho-sidebar-tab-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('rancho-tab-' + tab.dataset.tab).classList.add('active');
+      });
+    });
+
+    // Save Google Sheets config
+    document.getElementById('rancho-save-gsheets').addEventListener('click', () => {
+      const url = document.getElementById('rancho-gsheets-url').value.trim();
+      if (!url) {
+        showSidebarStatus('rancho-gsheets-status', 'error', 'Please enter the URL');
+        return;
+      }
+      if (!url.startsWith('https://script.google.com/')) {
+        showSidebarStatus('rancho-gsheets-status', 'error', 'Invalid URL format');
+        return;
+      }
+      chrome.storage.sync.set({ gSheetsUrl: url }, () => {
+        showSidebarStatus('rancho-gsheets-status', 'success', '✅ Config saved');
+      });
+    });
+
+    // Test Google Sheets connection
+    document.getElementById('rancho-test-gsheets').addEventListener('click', () => {
+      const url = document.getElementById('rancho-gsheets-url').value.trim();
+      if (!url) {
+        showSidebarStatus('rancho-gsheets-status', 'error', 'Please enter URL first');
+        return;
+      }
+      showSidebarStatus('rancho-gsheets-status', 'info', '🔄 Testing...');
+      chrome.runtime.sendMessage({ action: 'testGSheetsConnection', url: url }, response => {
+        if (response && response.success) {
+          showSidebarStatus('rancho-gsheets-status', 'success', '✅ Connected!');
+        } else {
+          showSidebarStatus('rancho-gsheets-status', 'error', '❌ ' + (response?.error || 'Failed'));
+        }
+      });
+    });
+
+    // Save Notion config
+    document.getElementById('rancho-save-notion').addEventListener('click', () => {
+      const token = document.getElementById('rancho-notion-token').value.trim();
+      const databaseId = document.getElementById('rancho-notion-database').value.trim();
+      if (!token || !databaseId) {
+        showSidebarStatus('rancho-notion-status', 'error', 'Please fill in both fields');
+        return;
+      }
+      chrome.storage.sync.set({ notionToken: token, notionDatabaseId: databaseId }, () => {
+        showSidebarStatus('rancho-notion-status', 'success', '✅ Config saved');
+      });
+    });
+
+    // Test Notion connection
+    document.getElementById('rancho-test-notion').addEventListener('click', () => {
+      const token = document.getElementById('rancho-notion-token').value.trim();
+      const databaseId = document.getElementById('rancho-notion-database').value.trim();
+      if (!token || !databaseId) {
+        showSidebarStatus('rancho-notion-status', 'error', 'Please fill in both fields first');
+        return;
+      }
+      showSidebarStatus('rancho-notion-status', 'info', '🔄 Testing...');
+      chrome.runtime.sendMessage({ action: 'testNotionConnection', token: token, databaseId: databaseId }, response => {
+        if (response && response.success) {
+          showSidebarStatus('rancho-notion-status', 'success', '✅ Connected!');
+        } else {
+          showSidebarStatus('rancho-notion-status', 'error', '❌ ' + (response?.error || 'Failed'));
+        }
+      });
+    });
+
+    // Save assumptions
+    document.getElementById('rancho-save-assumptions').addEventListener('click', () => {
+      const defaults = getDefaultAssumptions();
+      const assumptions = {
+        downPaymentPercent: parseFloat(document.getElementById('rancho-down-payment').value) || defaults.downPaymentPercent,
+        interestRate: parseFloat(document.getElementById('rancho-interest-rate').value) || defaults.interestRate,
+        loanTermYears: parseInt(document.getElementById('rancho-loan-term').value) || defaults.loanTermYears,
+        mortgageInsuranceRate: parseFloat(document.getElementById('rancho-pmi-rate').value) || defaults.mortgageInsuranceRate,
+        propertyTaxRate: parseFloat(document.getElementById('rancho-property-tax').value) || defaults.propertyTaxRate,
+        insuranceRate: parseFloat(document.getElementById('rancho-insurance-rate').value) || defaults.insuranceRate,
+        maintenancePercent: parseFloat(document.getElementById('rancho-maintenance-percent').value) || defaults.maintenancePercent,
+        propertyManagementPercent: parseFloat(document.getElementById('rancho-management-percent').value) || defaults.propertyManagementPercent,
+        vacancyRate: parseFloat(document.getElementById('rancho-vacancy-rate').value) || 0,
+        incomeTaxRate: parseFloat(document.getElementById('rancho-income-tax-rate').value) || defaults.incomeTaxRate,
+        highIncomeTaxRate: parseFloat(document.getElementById('rancho-high-income-tax-rate').value) || defaults.highIncomeTaxRate,
+        appreciationRate: parseFloat(document.getElementById('rancho-appreciation-rate').value) || defaults.appreciationRate
+      };
+      chrome.storage.sync.set({ assumptions }, () => {
+        showSidebarStatus('rancho-assumptions-status', 'success', '✅ Parameters saved');
+      });
+    });
+
+    // Reset assumptions
+    document.getElementById('rancho-reset-assumptions').addEventListener('click', () => {
+      const defaults = getDefaultAssumptions();
+      document.getElementById('rancho-down-payment').value = defaults.downPaymentPercent;
+      document.getElementById('rancho-interest-rate').value = defaults.interestRate;
+      document.getElementById('rancho-loan-term').value = defaults.loanTermYears;
+      document.getElementById('rancho-pmi-rate').value = defaults.mortgageInsuranceRate;
+      document.getElementById('rancho-property-tax').value = defaults.propertyTaxRate;
+      document.getElementById('rancho-insurance-rate').value = defaults.insuranceRate;
+      document.getElementById('rancho-maintenance-percent').value = defaults.maintenancePercent;
+      document.getElementById('rancho-management-percent').value = defaults.propertyManagementPercent;
+      document.getElementById('rancho-vacancy-rate').value = defaults.vacancyRate;
+      document.getElementById('rancho-income-tax-rate').value = defaults.incomeTaxRate;
+      document.getElementById('rancho-high-income-tax-rate').value = defaults.highIncomeTaxRate;
+      document.getElementById('rancho-appreciation-rate').value = defaults.appreciationRate;
+      chrome.storage.sync.set({ assumptions: defaults }, () => {
+        showSidebarStatus('rancho-assumptions-status', 'success', '✅ Reset to defaults');
+      });
+    });
+  }
+
+  // Load settings into sidebar
+  function loadSidebarSettings() {
+    chrome.storage.sync.get(['notionToken', 'notionDatabaseId', 'gSheetsUrl', 'assumptions'], (result) => {
+      if (result.gSheetsUrl) {
+        document.getElementById('rancho-gsheets-url').value = result.gSheetsUrl;
+      }
+      if (result.notionToken) {
+        document.getElementById('rancho-notion-token').value = result.notionToken;
+      }
+      if (result.notionDatabaseId) {
+        document.getElementById('rancho-notion-database').value = result.notionDatabaseId;
+      }
+
+      const defaults = getDefaultAssumptions();
+      const assumptions = { ...defaults, ...(result.assumptions || {}) };
+
+      document.getElementById('rancho-down-payment').value = assumptions.downPaymentPercent;
+      document.getElementById('rancho-interest-rate').value = assumptions.interestRate;
+      document.getElementById('rancho-loan-term').value = assumptions.loanTermYears;
+      document.getElementById('rancho-pmi-rate').value = assumptions.mortgageInsuranceRate;
+      document.getElementById('rancho-property-tax').value = assumptions.propertyTaxRate;
+      document.getElementById('rancho-insurance-rate').value = assumptions.insuranceRate;
+      document.getElementById('rancho-maintenance-percent').value = assumptions.maintenancePercent;
+      document.getElementById('rancho-management-percent').value = assumptions.propertyManagementPercent;
+      document.getElementById('rancho-vacancy-rate').value = assumptions.vacancyRate;
+      document.getElementById('rancho-income-tax-rate').value = assumptions.incomeTaxRate;
+      document.getElementById('rancho-high-income-tax-rate').value = assumptions.highIncomeTaxRate;
+      document.getElementById('rancho-appreciation-rate').value = assumptions.appreciationRate;
+    });
+  }
+
+  // Show status message in sidebar
+  function showSidebarStatus(elementId, type, message) {
+    const statusEl = document.getElementById(elementId);
+    statusEl.className = 'rancho-sidebar-status ' + type;
+    statusEl.textContent = message;
+    setTimeout(() => {
+      statusEl.className = 'rancho-sidebar-status';
+    }, 3000);
+  }
+
   // Create Rancho button - fixed at bottom right
   function createRanchoButton() {
     if (!isPropertyDetailPage()) {
@@ -33,6 +390,9 @@
       e.stopPropagation();
       analyzeProperty();
     });
+
+    // Also create the settings sidebar
+    createSettingsSidebar();
   }
 
   // Scrape property data from page
@@ -298,11 +658,14 @@
 
             <div class="rancho-section">
               <h3>💵 Purchase & Loan</h3>
-              <p><strong>Price:</strong> $${result.price?.toLocaleString() || 'N/A'}</p>
-              <p><strong>Down Payment:</strong> ${result.downPaymentPercent}% ($${result.downPayment?.toLocaleString()})</p>
-              <p><strong>Loan Amount:</strong> $${result.loanAmount?.toLocaleString()}</p>
-              <p><strong>LTV:</strong> ${result.ltv}%</p>
+              <p><strong>Price:</strong>
+                <span class="highlight-pink">$</span><input type="number" id="rancho-price-input" value="${result.price || 0}" style="width: 100px; font-size: 14px; font-weight: 600; color: #D4A373; border: 1px solid #ccc; border-radius: 4px; padding: 2px 6px;">
+              </p>
+              <p><strong>Down Payment:</strong> <span id="rancho-dp-display">${result.downPaymentPercent}% ($${result.downPayment?.toLocaleString()})</span></p>
+              <p><strong>Loan Amount:</strong> $<span id="rancho-loan-display">${result.loanAmount?.toLocaleString()}</span></p>
+              <p><strong>LTV:</strong> <span id="rancho-ltv-display">${result.ltv}</span>%</p>
               <p><strong>Rate:</strong> ${result.assumptions?.interestRate}% / ${result.assumptions?.loanTermYears}yr</p>
+              <small style="color: #666; font-size: 11px;">💡 Edit price and click Recalc below to update calculations.</small>
             </div>
           </div>
 
@@ -365,8 +728,9 @@
           </div>
 
           <div class="rancho-actions">
-            <button id="rancho-add-to-excel" class="rancho-btn-primary">📝 Add to Notion</button>
-            <button id="rancho-copy" class="rancho-btn-secondary">📋 Copy Results</button>
+            <button id="rancho-add-to-sheets" class="rancho-btn-primary">📊 Add to Sheets</button>
+            <button id="rancho-add-to-excel" class="rancho-btn-secondary">📝 Add to Notion</button>
+            <button id="rancho-copy" class="rancho-btn-secondary">📋 Copy</button>
           </div>
         </div>
       `;
@@ -380,23 +744,51 @@
       if (e.target === modal) modal.remove();
     });
 
-    // Add to Excel button
+    // Add to Google Sheets button
+    const addSheetsBtn = modal.querySelector('#rancho-add-to-sheets');
+    if (addSheetsBtn) {
+      addSheetsBtn.addEventListener('click', () => {
+        addSheetsBtn.textContent = '⏳...';
+        chrome.runtime.sendMessage({
+          action: 'addToGoogleSheets',
+          data: result
+        }, response => {
+          if (chrome.runtime.lastError) {
+            alert('Extension error. Please refresh.');
+            addSheetsBtn.textContent = '📊 Add to Sheets';
+            return;
+          }
+          if (response && response.success) {
+            addSheetsBtn.textContent = '✅ Added!';
+            addSheetsBtn.disabled = true;
+          } else {
+            alert('Failed: ' + (response?.error || 'Please configure Google Sheets URL in extension settings'));
+            addSheetsBtn.textContent = '📊 Add to Sheets';
+          }
+        });
+      });
+    }
+
+    // Add to Notion button
     const addBtn = modal.querySelector('#rancho-add-to-excel');
     if (addBtn) {
       addBtn.addEventListener('click', () => {
+        addBtn.textContent = '⏳...';
         chrome.runtime.sendMessage({
           action: 'addToExcel',
           data: result
         }, response => {
           if (chrome.runtime.lastError) {
             alert('Extension error. Please refresh.');
+            addBtn.textContent = '📝 Add to Notion';
             return;
           }
           if (response && response.success) {
             addBtn.textContent = '✅ Added!';
             addBtn.disabled = true;
           } else {
-            alert('Failed: ' + (response?.error || 'Unknown error'));
+            alert('Failed: ' + (response?.error || 'Please configure Notion in extension settings'));
+            addBtn.textContent = '📝 Add to Notion';
           }
         });
       });
@@ -421,19 +813,20 @@ Cap Rate: ${result.capRate?.toFixed(2)}%`;
       });
     }
 
-    // Recalculate button - recalculate with custom rent
+    // Recalculate button - recalculate with custom rent and price
     const recalcBtn = modal.querySelector('#rancho-recalc');
     if (recalcBtn) {
       recalcBtn.addEventListener('click', () => {
         const newRent = parseInt(document.getElementById('rancho-rent-input').value) || 0;
+        const newPrice = parseInt(document.getElementById('rancho-price-input').value) || result.price;
         recalcBtn.textContent = '⏳...';
 
-        // Create modified property data with custom rent
+        // Create modified property data with custom rent and price
         const modifiedData = {
           ...result,
           zestimateRent: newRent,
-          // Pass original property info for recalculation
-          price: result.price,
+          // Pass property info for recalculation (price may be modified)
+          price: newPrice,
           bedrooms: result.bedrooms,
           bathrooms: result.bathrooms,
           sqft: result.sqft,
@@ -449,7 +842,15 @@ Cap Rate: ${result.capRate?.toFixed(2)}%`;
           if (response && response.success) {
             // Update the modal with new results
             const newResult = response.result;
+            result.price = newResult.price;
+            result.downPayment = newResult.downPayment;
+            result.loanAmount = newResult.loanAmount;
+            result.ltv = newResult.ltv;
             result.monthlyRent = newResult.monthlyRent;
+            result.monthlyMortgage = newResult.monthlyMortgage;
+            result.monthlyTax = newResult.monthlyTax;
+            result.monthlyInsurance = newResult.monthlyInsurance;
+            result.monthlyPMI = newResult.monthlyPMI;
             result.monthlyCashflow10 = newResult.monthlyCashflow10;
             result.monthlyCashflow30 = newResult.monthlyCashflow30;
             result.cashflowAPY10 = newResult.cashflowAPY10;
@@ -464,6 +865,7 @@ Cap Rate: ${result.capRate?.toFixed(2)}%`;
             result.preTaxCashflow = newResult.preTaxCashflow;
             result.annualCashflow10 = newResult.annualCashflow10;
             result.annualCashflow30 = newResult.annualCashflow30;
+            result.annualAppreciation = newResult.annualAppreciation;
             result.annualNOI = newResult.annualNOI;
 
             // Close and reopen modal with new data
