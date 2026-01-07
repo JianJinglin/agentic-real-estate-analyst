@@ -26,277 +26,253 @@
   transform: translateY(-1px) scale(1.02);
 }
 
-/* ==================== Sidebar Styles ==================== */
-#rancho-sidebar {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  height: 100% !important;
-  z-index: 2147483646 !important;
+/* ==================== Dual Panel Layout ==================== */
+.rancho-modal-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0;
+}
+
+.rancho-modal-wrapper.rancho-dual-panel {
+  gap: 0;
+  align-items: stretch;
+}
+
+/* Settings Panel (Left) */
+.rancho-settings-panel {
+  width: 280px;
+  min-width: 280px;
+  background: white;
+  border-radius: 16px 0 0 16px;
+  overflow-y: auto;
+  max-height: 90vh;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideIn 0.3s ease;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-/* Toggle button - fixed on left side */
-.rancho-sidebar-toggle {
-  position: fixed !important;
-  top: 50% !important;
-  left: 0 !important;
-  transform: translateY(-50%) !important;
+.rancho-settings-header {
   background: linear-gradient(135deg, #CCD5AE 0%, #D4A373 100%);
   color: #FEFAE0;
-  border: none;
-  padding: 15px 10px;
-  border-radius: 0 12px 12px 0;
-  font-size: 20px;
-  cursor: pointer;
-  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
-  transition: all 0.3s ease;
-  z-index: 2147483647 !important;
-}
-
-.rancho-sidebar-toggle:hover {
-  padding-left: 15px;
-  box-shadow: 4px 0 15px rgba(0, 0, 0, 0.3);
-}
-
-.rancho-sidebar-toggle.hidden {
-  transform: translateY(-50%) translateX(-100%) !important;
-  opacity: 0;
-  pointer-events: none;
-}
-
-/* Sidebar content panel */
-.rancho-sidebar-content {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  width: 360px !important;
-  height: 100% !important;
-  background: white;
-  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
-  transform: translateX(-100%);
-  transition: transform 0.3s ease;
-  overflow-y: auto;
-  z-index: 2147483646 !important;
-}
-
-.rancho-sidebar-content.open {
-  transform: translateX(0);
-}
-
-/* Sidebar header */
-.rancho-sidebar-header {
-  background: linear-gradient(135deg, #CCD5AE 0%, #D4A373 100%);
-  color: #FEFAE0;
-  padding: 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  padding: 15px 20px;
   position: sticky;
   top: 0;
   z-index: 10;
 }
 
-.rancho-sidebar-header h2 {
+.rancho-settings-header h2 {
   margin: 0;
-  font-size: 20px;
+  font-size: 18px;
 }
 
-.rancho-sidebar-close {
-  font-size: 28px;
-  cursor: pointer;
-  opacity: 0.8;
-  transition: opacity 0.2s;
-}
-
-.rancho-sidebar-close:hover {
-  opacity: 1;
-}
-
-/* Sidebar tabs */
-.rancho-sidebar-tabs {
+/* Settings Tabs */
+.rancho-settings-tabs {
   display: flex;
   border-bottom: 1px solid #eee;
   background: white;
   position: sticky;
-  top: 60px;
+  top: 52px;
   z-index: 9;
 }
 
-.rancho-sidebar-tab {
+.rancho-settings-tab {
   flex: 1;
-  padding: 12px 8px;
+  padding: 10px 5px;
   border: none;
   background: white;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 11px;
   color: #666;
   transition: all 0.2s;
 }
 
-.rancho-sidebar-tab:hover {
+.rancho-settings-tab:hover {
   background: #f5f5f5;
 }
 
-.rancho-sidebar-tab.active {
+.rancho-settings-tab.active {
   color: #D4A373;
   border-bottom: 2px solid #D4A373;
   font-weight: bold;
 }
 
-/* Sidebar tab content */
-.rancho-sidebar-tab-content {
+/* Settings Tab Content */
+.rancho-settings-tab-content {
   display: none;
-  padding: 15px;
+  padding: 12px;
 }
 
-.rancho-sidebar-tab-content.active {
+.rancho-settings-tab-content.active {
   display: block;
 }
 
-/* Sidebar sections */
-.rancho-sidebar-section {
-  margin-bottom: 15px;
-  padding: 15px;
+/* Panel Sections */
+.rancho-panel-section {
+  margin-bottom: 12px;
+  padding: 12px;
   background: #FEFAE0;
   border-radius: 8px;
 }
 
-.rancho-sidebar-section h3 {
-  font-size: 14px;
+.rancho-panel-section h3 {
+  font-size: 13px;
   color: #333;
-  margin: 0 0 12px 0;
+  margin: 0 0 10px 0;
 }
 
-.rancho-sidebar-section p {
-  font-size: 12px;
+.rancho-panel-section p {
+  font-size: 11px;
   color: #555;
-  margin: 6px 0;
-  line-height: 1.5;
+  margin: 4px 0;
+  line-height: 1.4;
 }
 
-.rancho-sidebar-section ol {
-  padding-left: 20px;
-  font-size: 12px;
+.rancho-panel-section ol {
+  padding-left: 18px;
+  font-size: 11px;
   color: #555;
+  margin: 0;
 }
 
-.rancho-sidebar-section ol li {
-  margin-bottom: 8px;
+.rancho-panel-section ol li {
+  margin-bottom: 6px;
 }
 
-/* Form groups */
-.rancho-form-group {
-  margin-bottom: 12px;
+/* Panel Form Groups */
+.rancho-panel-form-group {
+  margin-bottom: 10px;
 }
 
-.rancho-form-group label {
+.rancho-panel-form-group label {
   display: block;
-  font-size: 12px;
+  font-size: 11px;
   color: #666;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
-.rancho-form-group input {
+.rancho-panel-form-group input {
   width: 100%;
-  padding: 10px;
+  padding: 8px;
   border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 14px;
+  border-radius: 5px;
+  font-size: 13px;
   transition: border-color 0.2s;
   box-sizing: border-box;
 }
 
-.rancho-form-group input:focus {
+.rancho-panel-form-group input:focus {
   outline: none;
   border-color: #D4A373;
 }
 
-.rancho-form-group small {
-  display: block;
-  font-size: 10px;
-  color: #999;
-  margin-top: 4px;
+/* Form Row for side-by-side inputs */
+.rancho-panel-form-row {
+  display: flex;
+  gap: 8px;
 }
 
-/* Sidebar buttons */
-.rancho-sidebar-btn-primary {
+.rancho-panel-form-row .rancho-panel-form-group {
+  flex: 1;
+}
+
+/* Panel Buttons */
+.rancho-panel-btn-primary {
   width: 100%;
-  padding: 10px;
+  padding: 8px;
   background: linear-gradient(135deg, #CCD5AE 0%, #D4A373 100%);
   color: #FEFAE0;
   border: none;
-  border-radius: 6px;
-  font-size: 13px;
+  border-radius: 5px;
+  font-size: 12px;
   font-weight: bold;
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
-.rancho-sidebar-btn-primary:hover {
+.rancho-panel-btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(212, 163, 115, 0.5);
+  box-shadow: 0 3px 10px rgba(212, 163, 115, 0.5);
 }
 
-.rancho-sidebar-btn-secondary {
+.rancho-panel-btn-secondary {
   width: 100%;
-  padding: 10px;
+  padding: 8px;
   background: #FEFAE0;
   color: #D4A373;
-  border: 2px solid #D4A373;
-  border-radius: 6px;
-  font-size: 13px;
+  border: 1px solid #D4A373;
+  border-radius: 5px;
+  font-size: 12px;
   font-weight: bold;
   cursor: pointer;
   transition: all 0.2s;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
-.rancho-sidebar-btn-secondary:hover {
+.rancho-panel-btn-secondary:hover {
   background: #D4A373;
   color: #FEFAE0;
 }
 
-/* Sidebar status */
-.rancho-sidebar-status {
-  margin-top: 10px;
-  padding: 10px;
-  border-radius: 6px;
-  font-size: 12px;
+/* Panel Status */
+.rancho-panel-status {
+  margin-top: 8px;
+  padding: 8px;
+  border-radius: 5px;
+  font-size: 11px;
   text-align: center;
   display: none;
 }
 
-.rancho-sidebar-status.success {
+.rancho-panel-status.success {
   display: block;
   background: #d4edda;
   color: #155724;
 }
 
-.rancho-sidebar-status.error {
+.rancho-panel-status.error {
   display: block;
   background: #f8d7da;
   color: #721c24;
 }
 
-.rancho-sidebar-status.info {
+.rancho-panel-status.info {
   display: block;
   background: #cce5ff;
   color: #004085;
 }
 
-/* Sidebar footer */
-.rancho-sidebar-footer {
+/* Settings Footer */
+.rancho-settings-footer {
   text-align: center;
-  padding: 15px;
-  font-size: 11px;
+  padding: 10px;
+  font-size: 10px;
   color: #999;
   border-top: 1px solid #eee;
 }
 
-.rancho-sidebar-footer p {
+.rancho-settings-footer p {
   margin: 0;
+}
+
+/* Scrollbar for settings panel */
+.rancho-settings-panel::-webkit-scrollbar {
+  width: 6px;
+}
+
+.rancho-settings-panel::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.rancho-settings-panel::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+/* Dual panel modal content adjustment */
+.rancho-dual-panel .rancho-modal-content {
+  border-radius: 0 16px 16px 0;
 }
 
 /* Modal style */
@@ -580,6 +556,25 @@
 }
 
 /* Responsive adjustments */
+@media (max-width: 1000px) {
+  .rancho-modal-wrapper.rancho-dual-panel {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .rancho-settings-panel {
+    width: 90%;
+    max-width: 600px;
+    border-radius: 16px 16px 0 0;
+    max-height: 40vh;
+  }
+
+  .rancho-dual-panel .rancho-modal-content {
+    border-radius: 0 0 16px 16px;
+    max-height: 50vh;
+  }
+}
+
 @media (max-width: 700px) {
   .rancho-grid {
     grid-template-columns: 1fr;
@@ -593,5 +588,9 @@
   .rancho-row {
     flex-direction: column;
     gap: 5px;
+  }
+
+  .rancho-settings-panel {
+    width: 95%;
   }
 }
